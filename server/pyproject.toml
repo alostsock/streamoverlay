@@ -7,3 +7,14 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.115.7",
 ]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "single"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9.3",
+]
