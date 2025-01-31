@@ -1,12 +1,34 @@
-from fastapi import FastAPI
+import os
+import asyncio
+from asyncio.exceptions import CancelledError
+import logging
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi_cli.utils.cli import get_uvicorn_log_config
+from starlette.websockets import WebSocketState
 from app.config import config
 
-app = FastAPI()
+
+app = FastAPI(debug=True)
+logger = logging.getLogger('uvicorn')
 
 
-@app.get('/now-playing')
-async def now_playing():
-    with open(config.now_playing_path, 'r') as f:
-        now_playing = f.read().strip()
+@app.websocket('/now-playing')
+async def now_playing(websocket: WebSocket):
+    await websocket.accept()
 
-    return {'message': now_playing}
+    path = config.now_playing_path
+    now_playing = 'No BGM'
+    last_time = None
+
+    try:
+        while websocket.application_state == WebSocketState.CONNECTED:
+            modified_time = os.stat(path).st_mtime
+            if last_time is None or modified_time != last_time:
+                last_time = modified_time
+                with open(path, 'r') as f:
+                    now_playing = f.read().strip()
+                    await websocket.send_text(now_playing)
+            await asyncio.sleep(0.5)
+    except (WebSocketDisconnect, CancelledError):
+        logger.error('client disconnected')

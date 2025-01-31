@@ -1,0 +1,161 @@
+:root {
+  color: var(--orange-2);
+  font-family: DotGothic16, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 1.5px;
+  text-shadow: 1px 1px 1.5px var(--orange-5);
+  line-height: 1.5;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+
+  --radius: 0.2rem;
+
+  --dark-0: hsl(4.54deg 15.81% 91.23%);
+  --dark-1: hsl(4.39deg 15.16% 76.16%);
+  --dark-2: hsl(4.17deg 14.44% 62.08%);
+  --dark-3: hsl(3.82deg 13.92% 49.49%);
+  --dark-4: hsl(3.29deg 20.22% 38.8%);
+  --dark-5: hsl(2.51deg 27.65% 30.29%);
+  --dark-6: hsl(1.48deg 35.58% 24.15%);
+  --dark-7: hsl(0.46deg 42.21% 20.45%);
+  --dark-8: hsl(2.2deg 40.77% 12.85%);
+  --dark-9: hsl(6.31deg 48.19% 6.23%);
+
+  --orange-0: hsl(20.83deg 100% 95.2%);
+  --orange-1: hsl(20.78deg 100% 93.74%);
+  --orange-2: hsl(20.61deg 100% 89.5%);
+  --orange-3: hsl(20.29deg 100% 82.89%);
+  --orange-4: hsl(20.06deg 97.55% 74.15%);
+  --orange-5: hsl(20.43deg 89.14% 62.77%);
+  --orange-6: hsl(21.55deg 82.82% 38.21%);
+  --orange-7: hsl(20.93deg 75.95% 28.52%);
+  --orange-8: hsl(20.49deg 67.52% 18.94%);
+  --orange-9: hsl(24.54deg 64.69% 9.09%);
+
+  --light-0: hsl(171.98deg 100% 99.56%);
+  --light-1: hsl(172deg 100% 99.29%);
+  --light-2: hsl(172.03deg 100% 98.56%);
+  --light-3: hsl(172.08deg 100% 97.55%);
+  --light-4: hsl(172.12deg 100% 96.52%);
+  --light-5: hsl(172.16deg 100% 95.77%);
+  --light-6: hsl(172.15deg 12.52% 73.05%);
+  --light-7: hsl(172.12deg 4.79% 51.83%);
+  --light-8: hsl(172.06deg 4.16% 32.1%);
+  --light-9: hsl(171.93deg 3.38% 14.29%);
+
+  --beige-0: hsl(21.81deg 93.6% 97.48%);
+  --beige-1: hsl(21.94deg 92.26% 95.95%);
+  --beige-2: hsl(22.27deg 88.76% 91.68%);
+  --beige-3: hsl(22.73deg 84.34% 85.71%);
+  --beige-4: hsl(23.19deg 80.26% 79.59%);
+  --beige-5: hsl(23.53deg 77.46% 75.02%);
+  --beige-6: hsl(23.58deg 35.29% 56.5%);
+  --beige-7: hsl(23.46deg 26.19% 40.53%);
+  --beige-8: hsl(23.25deg 24.41% 25.6%);
+  --beige-9: hsl(22.76deg 19.71% 11.97%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none;
+}
+
+body {
+  margin: 0;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  aspect-ratio: 16 / 9;
+}
+
+main {
+  height: 100%;
+
+  display: grid;
+  grid-template-areas: 'side main';
+  grid-template-columns: 25% 75%;
+  grid-template-rows: 1fr;
+}
+
+.Main {
+  grid-area: main;
+
+  height: 100%;
+}
+
+.Sidebar {
+  --gap: 1em;
+
+  grid-area: side;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+
+  background-color: var(--dark-9);
+  height: 100%;
+  padding: 0.5em;
+
+  position: relative;
+}
+
+.BackgroundPattern {
+  stroke: currentColor;
+
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  padding: 0.25em;
+  opacity: 0.15;
+}
+
+.Spacer {
+  flex-grow: 1;
+  margin-top: calc(-1 * var(--gap));
+}
+
+.NowPlaying {
+  padding: 0.25em 0.5em;
+  border-radius: var(--radius);
+}
+
+.Marquee {
+  --gap: 6em;
+
+  display: flex;
+  gap: var(--gap);
+  overflow: hidden;
+
+  & > span {
+    display: block;
+    white-space: nowrap;
+  }
+
+  &.scroll > span {
+    animation: marquee 10s linear infinite;
+  }
+
+  @keyframes marquee {
+    0%,
+    30% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+}
