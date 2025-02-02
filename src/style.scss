@@ -130,6 +130,8 @@ main {
 .Marquee {
   --marquee-gap: 6em;
 
+  min-height: 1lh;
+
   display: flex;
   gap: var(--marquee-gap);
   overflow: hidden;
