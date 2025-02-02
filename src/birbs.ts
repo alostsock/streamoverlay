@@ -55,10 +55,7 @@ const getBoundingBoxToPointVec = (
 export class Flock {
   birbs: Birb[];
 
-  boundingBox = new THREE.Box3(
-    new THREE.Vector3(-500, -150, -200),
-    new THREE.Vector3(500, 300, 50),
-  );
+  boundingBox = new THREE.Box3(new THREE.Vector3(-600, 0, -600), new THREE.Vector3(1100, 800, 150));
 
   colors = {
     sky: color('--text-color'),
@@ -67,8 +64,9 @@ export class Flock {
   } as const;
 
   constructor(
-    public containerEl: HTMLDivElement,
-    count = 30,
+    private containerEl: HTMLDivElement,
+    private count = 100,
+    private cameraVerticalAdjustment = 0,
   ) {
     this.birbs = new Array(count)
       .fill(null)
@@ -77,7 +75,21 @@ export class Flock {
 
   private update(delta: number) {
     for (const birb of this.birbs) {
-      birb.update(delta, this.boundingBox);
+      const neighbors = this.birbs
+        .filter(
+          (neighborCandidate) =>
+            birb !== neighborCandidate &&
+            birb.obj.position.distanceTo(neighborCandidate.obj.position) < birb.detectionRange,
+        )
+        .slice(0, this.count / 10); // Just take a sample
+      birb.update(delta, this.boundingBox, neighbors);
+
+      if (DEBUG && Math.random() < 0.00005) {
+        const birbsOutside = this.birbs.filter(
+          (b) => !this.boundingBox.containsPoint(b.obj.position),
+        );
+        console.log(`birbs outside bounding box: ${birbsOutside.length}`);
+      }
     }
   }
 
@@ -87,10 +99,11 @@ export class Flock {
 
     const scene = new THREE.Scene();
 
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 2000);
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1300);
     camera.position.z = 300;
-    camera.position.y = 0;
-    camera.rotateX(deg(5)); // gaze slightly upward
+    camera.position.y = this.cameraVerticalAdjustment;
+    // gaze upward and to the right
+    camera.setRotationFromAxisAngle(new THREE.Vector3(0.75, -1, 0), deg(15));
 
     const ambientLight = new THREE.HemisphereLight(this.colors.sky, this.colors.ground, 3);
     scene.add(ambientLight);
@@ -127,7 +140,7 @@ export class Flock {
             this.containerEl.removeChild(this.containerEl.firstChild);
           }
           const NewFlock: typeof Flock = newModule.Flock;
-          new NewFlock(this.containerEl).render();
+          new NewFlock(this.containerEl, this.count, this.cameraVerticalAdjustment).render();
         }
       });
     }
@@ -136,14 +149,19 @@ export class Flock {
 
 export class Birb {
   obj: THREE.Mesh;
-  position: THREE.Vector3;
   velocity: THREE.Vector3;
   accel = new THREE.Vector3(0, 0, 0);
 
-  private maxSpeed = 100;
-  private boundaryDetectionRange = 125;
-  private boundaryCollisionAccelWeight = 1.5;
-  private underspeedAccelWeight = 0.5;
+  detectionRange = 400;
+
+  private maxSpeed = 135;
+  private cohesionMult = 0.5;
+  private alignmentMult = 1.2;
+  private separationDistanceMult = 0.1;
+  private separationMult = 0.0003;
+  private boundaryDistanceMult = 0.2;
+  private boundarySteeringMult = 3;
+  private underspeedMult = 3.5;
 
   constructor(color: THREE.ColorRepresentation, boundingBox: THREE.Box3) {
     this.obj = this.createBirbMesh(color);
@@ -153,49 +171,87 @@ export class Birb {
       rand(boundingBox.min.z, boundingBox.max.z),
     );
     this.velocity = new THREE.Vector3().randomDirection().multiplyScalar(this.maxSpeed);
-    // this.velocity = new THREE.Vector3(0, -this.maxSpeed, 0);
     this.obj.lookAt(this.obj.position.clone().add(this.velocity));
   }
 
-  private getCollisionAccel(
-    collisionDisplacement: THREE.Vector3,
-    detectionRange: number,
-    weight: number,
-  ) {
-    // The collision should have minimal effect at max detection range
-    const collisionFactor = 1 - Math.pow(collisionDisplacement.length() / detectionRange, 2);
-    // The acceleration magnitude is a factor of velocity and collisionWeight.
-    // Acceleration direction matches that of displacement from target to birb.
-    return collisionDisplacement
-      .normalize()
-      .multiplyScalar(this.velocity.length() * weight * collisionFactor);
-  }
+  // This is all completely improvised but it seems to work
+  update(delta: number, boundingBox: THREE.Box3, neighbors: Birb[]) {
+    if (neighbors.length > 0) {
+      let avgPosition = new THREE.Vector3(0, 0, 0);
+      let avgHeading = new THREE.Vector3(0, 0, 0);
+      for (const birb of neighbors) {
+        avgPosition.add(birb.obj.position);
+        avgHeading.add(birb.velocity.clone().normalize());
+      }
+      avgPosition.divideScalar(neighbors.length);
+      avgHeading.divideScalar(neighbors.length).normalize();
 
-  update(delta: number, boundingBox: THREE.Box3) {
-    const boundaryDisplacement = getBoundingBoxToPointVec(
-      boundingBox,
-      this.obj.position,
-      this.boundaryDetectionRange,
-    );
-    if (boundaryDisplacement) {
-      const collisionAccel = this.getCollisionAccel(
-        boundaryDisplacement,
-        this.boundaryDetectionRange,
-        this.boundaryCollisionAccelWeight,
+      const cohesionDisplacement = avgPosition.clone().sub(this.obj.position);
+      const cohesionAccel = this.getSteeringAccel(
+        cohesionDisplacement,
+        this.detectionRange,
+        this.cohesionMult,
       );
-      this.velocity.addScaledVector(collisionAccel, delta);
+      this.velocity.addScaledVector(cohesionAccel, delta);
+
+      const headingDifference = avgHeading.sub(this.velocity.clone().normalize());
+      const alignmentAccel = this.getSteeringAccel(headingDifference, 1, this.alignmentMult);
+      this.velocity.addScaledVector(alignmentAccel, delta);
+
+      // TODO: Resample closest neigbors using separationDistance instead of detectionRange
+      const separationDistance = this.detectionRange * this.separationDistanceMult;
+      const separationMult = this.getSteeringAccel(
+        avgPosition.negate(),
+        separationDistance,
+        this.separationMult,
+      );
+      this.velocity.addScaledVector(separationMult, delta);
+    }
+
+    if (!boundingBox.containsPoint(this.obj.position)) {
+      // Try to get the birb back into the box
+      const boundingBoxCenter = new THREE.Vector3();
+      boundingBox.getCenter(boundingBoxCenter);
+      const displacement = boundingBoxCenter.clone().sub(this.obj.position);
+      const centerAccel = this.getSteeringAccel(
+        displacement,
+        displacement.length() * 2,
+        this.boundarySteeringMult,
+      );
+      this.velocity.addScaledVector(centerAccel, delta);
+    } else {
+      // Try to keep the birb in the box
+      const boundaryDistance = this.detectionRange * this.boundaryDistanceMult;
+      const boundaryDisplacement = getBoundingBoxToPointVec(
+        boundingBox,
+        this.obj.position,
+        boundaryDistance,
+      );
+      if (boundaryDisplacement) {
+        const collisionAccel = this.getSteeringAccel(
+          boundaryDisplacement,
+          boundaryDistance,
+          this.boundarySteeringMult,
+        );
+        this.velocity.addScaledVector(collisionAccel, delta);
+      }
     }
 
     if (this.velocity.length() < this.maxSpeed) {
-      this.velocity.addScaledVector(
-        this.velocity.clone().normalize(),
-        this.underspeedAccelWeight * delta,
-      );
+      this.velocity.addScaledVector(this.velocity.clone().normalize(), this.underspeedMult * delta);
     }
 
     this.velocity.clampLength(0, this.maxSpeed);
     this.obj.position.addScaledVector(this.velocity, delta);
     this.obj.lookAt(this.obj.position.clone().add(this.velocity));
+  }
+
+  private getSteeringAccel(displacement: THREE.Vector3, detectionRange: number, factor: number) {
+    // The steering should have minimal effect at max range, and a greater effect up close
+    const steerFactor = 1 - Math.pow(displacement.length() / detectionRange, 2);
+    // The acceleration magnitude is a factor of velocity and collisionWeight.
+    // Acceleration direction matches that of displacement.
+    return displacement.normalize().multiplyScalar(this.velocity.length() * steerFactor * factor);
   }
 
   private createBirbMesh(color: THREE.ColorRepresentation) {
@@ -238,7 +294,7 @@ export class Birb {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
     geometry.scale(2.0, 2.0, 2.0);
-    // geometry.scale(1.5, 1.5, 1.5);
+    // geometry.scale(1.75, 1.75, 1.75);
 
     const material = new THREE.MeshPhongMaterial({
       color,

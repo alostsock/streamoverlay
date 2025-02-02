@@ -16,7 +16,7 @@ export function App() {
         <main className="HomePage">
           <section className="Main" />
           <section className="Sidebar">
-            <Birbs />
+            <Birbs count={50} />
             <NowPlaying />
           </section>
         </main>
@@ -24,7 +24,7 @@ export function App() {
 
       <Route path="/birbs">
         <main className="BirbsPage">
-          <Birbs />
+          <Birbs count={200} cameraVerticalAdjustment={300} />
         </main>
       </Route>
     </Switch>
@@ -63,7 +63,7 @@ function Backgrounded({
             id="pattern-lines"
             width="7"
             height="7"
-            patternTransform="rotate(35 0 0)"
+            patternTransform="rotate(-35 0 0)"
             patternUnits="userSpaceOnUse"
           >
             <line x1="0" y1="0" x2="0" y2="7" stroke-linecap="round" />
@@ -152,13 +152,19 @@ function Marquee({ children, className, ...props }: JSX.HTMLAttributes<HTMLDivEl
   );
 }
 
-function Birbs() {
+function Birbs({
+  count,
+  cameraVerticalAdjustment,
+}: {
+  count?: number;
+  cameraVerticalAdjustment?: number;
+}) {
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!containerEl) return;
 
-    new Flock(containerEl).render();
+    new Flock(containerEl, count, cameraVerticalAdjustment).render();
   }, [containerEl]);
 
   return (
