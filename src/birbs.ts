@@ -141,8 +141,9 @@ export class Birb {
   accel = new THREE.Vector3(0, 0, 0);
 
   private maxSpeed = 100;
-  private detectionRange = 150;
-  private collisionWeight = 1.5;
+  private boundaryDetectionRange = 125;
+  private boundaryCollisionAccelWeight = 1.5;
+  private underspeedAccelWeight = 0.5;
 
   constructor(color: THREE.ColorRepresentation, boundingBox: THREE.Box3) {
     this.obj = this.createBirbMesh(color);
@@ -156,21 +157,40 @@ export class Birb {
     this.obj.lookAt(this.obj.position.clone().add(this.velocity));
   }
 
+  private getCollisionAccel(
+    collisionDisplacement: THREE.Vector3,
+    detectionRange: number,
+    weight: number,
+  ) {
+    // The collision should have minimal effect at max detection range
+    const collisionFactor = 1 - Math.pow(collisionDisplacement.length() / detectionRange, 2);
+    // The acceleration magnitude is a factor of velocity and collisionWeight.
+    // Acceleration direction matches that of displacement from target to birb.
+    return collisionDisplacement
+      .normalize()
+      .multiplyScalar(this.velocity.length() * weight * collisionFactor);
+  }
+
   update(delta: number, boundingBox: THREE.Box3) {
-    const collisionVec = getBoundingBoxToPointVec(
+    const boundaryDisplacement = getBoundingBoxToPointVec(
       boundingBox,
       this.obj.position,
-      this.detectionRange,
+      this.boundaryDetectionRange,
     );
-    if (collisionVec) {
-      // The collision should have minimal effect at max detection range
-      const collisionFactor = 1 - Math.pow(collisionVec.length() / this.detectionRange, 2);
-      // The acceleration magnitude is a factor of velocity and collisionWeight.
-      // acceleration direction is directly away from the bounding box.
-      const accelVec = collisionVec
-        .normalize()
-        .multiplyScalar(this.velocity.length() * this.collisionWeight * collisionFactor);
-      this.velocity.addScaledVector(accelVec, delta);
+    if (boundaryDisplacement) {
+      const collisionAccel = this.getCollisionAccel(
+        boundaryDisplacement,
+        this.boundaryDetectionRange,
+        this.boundaryCollisionAccelWeight,
+      );
+      this.velocity.addScaledVector(collisionAccel, delta);
+    }
+
+    if (this.velocity.length() < this.maxSpeed) {
+      this.velocity.addScaledVector(
+        this.velocity.clone().normalize(),
+        this.underspeedAccelWeight * delta,
+      );
     }
 
     this.velocity.clampLength(0, this.maxSpeed);
@@ -218,6 +238,7 @@ export class Birb {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
     geometry.scale(2.0, 2.0, 2.0);
+    // geometry.scale(1.5, 1.5, 1.5);
 
     const material = new THREE.MeshPhongMaterial({
       color,
