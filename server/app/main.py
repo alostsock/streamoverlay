@@ -4,7 +4,6 @@ from asyncio.exceptions import CancelledError
 import logging
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi_cli.utils.cli import get_uvicorn_log_config
 from starlette.websockets import WebSocketState
 from app.config import config
 
