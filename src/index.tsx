@@ -53,7 +53,12 @@ function Backgrounded({
   return (
     <Component className={cls} {...props}>
       {pattern === 'lines' ? (
-        <svg className="pattern" width="100px" height="100px" style="stroke-width: 1.5">
+        <svg
+          className="pattern"
+          width="100px"
+          height="100px"
+          style="stroke-width: 1.5; opacity: 0.3;"
+        >
           <pattern
             id="pattern-lines"
             width="7"
@@ -68,7 +73,12 @@ function Backgrounded({
       ) : null}
 
       {pattern === 'dots' ? (
-        <svg className="pattern" width="100px" height="100px" style="stroke-width: 2">
+        <svg
+          className="pattern"
+          width="100px"
+          height="100px"
+          style="stroke-width: 2; opacity: 0.25;"
+        >
           <pattern
             id="pattern-dots"
             width="8"
