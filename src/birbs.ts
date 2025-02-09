@@ -55,7 +55,7 @@ const getBoundingBoxToPointVec = (
 export class Flock {
   birbs: Birb[];
 
-  boundingBox = new THREE.Box3(new THREE.Vector3(-600, 0, -600), new THREE.Vector3(1100, 800, 150));
+  boundingBox = new THREE.Box3(new THREE.Vector3(-400, 0, -500), new THREE.Vector3(1000, 800, 150));
 
   colors = {
     sky: color('--text-color'),
@@ -84,7 +84,7 @@ export class Flock {
         .slice(0, this.count / 10); // Just take a sample
       birb.update(delta, this.boundingBox, neighbors);
 
-      if (DEBUG && Math.random() < 0.00005) {
+      if (DEBUG && Math.random() < 0.005 / this.count) {
         const birbsOutside = this.birbs.filter(
           (b) => !this.boundingBox.containsPoint(b.obj.position),
         );
@@ -99,11 +99,11 @@ export class Flock {
 
     const scene = new THREE.Scene();
 
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1300);
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1400);
     camera.position.z = 300;
     camera.position.y = this.cameraVerticalAdjustment;
     // gaze upward and to the right
-    camera.setRotationFromAxisAngle(new THREE.Vector3(0.75, -1, 0), deg(15));
+    camera.setRotationFromAxisAngle(new THREE.Vector3(0.75, -1.5, 0), deg(15));
 
     const ambientLight = new THREE.HemisphereLight(this.colors.sky, this.colors.ground, 3);
     scene.add(ambientLight);
@@ -154,14 +154,14 @@ export class Birb {
 
   detectionRange = 400;
 
-  private maxSpeed = 135;
+  private maxSpeed = 145;
   private cohesionMult = 0.5;
   private alignmentMult = 1.2;
   private separationDistanceMult = 0.1;
   private separationMult = 0.0003;
-  private boundaryDistanceMult = 0.2;
-  private boundarySteeringMult = 3;
-  private underspeedMult = 3.5;
+  private boundaryDistanceMult = 0.3;
+  private boundarySteeringMult = 2.5;
+  private underspeedMult = 5;
 
   constructor(color: THREE.ColorRepresentation, boundingBox: THREE.Box3) {
     this.obj = this.createBirbMesh(color);
