@@ -8,7 +8,8 @@ const rand = (min: number, max: number) => min + (max - min) * Math.random();
 
 const color = (colorVar: string, el: HTMLElement = document.documentElement) => {
   const cssColor = window.getComputedStyle(el).getPropertyValue(colorVar);
-  return new THREE.Color().setStyle(cssColor);
+  const hex = parseInt(cssColor.replace('#', ''), 16);
+  return new THREE.Color().setHex(hex);
 };
 
 /**
