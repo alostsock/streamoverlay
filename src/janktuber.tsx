@@ -46,7 +46,7 @@ export function Janktuber() {
 
   return (
     <div className="Janktuber">
-      <video ref={setVideoEl} autoplay />
+      <video ref={setVideoEl} autoplay style={{ display: 'none' }} />
 
       <div ref={setContainerEl} className="container" />
 

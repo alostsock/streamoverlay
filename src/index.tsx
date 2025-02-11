@@ -12,11 +12,11 @@ export function App() {
     <Switch>
       <Route path="/">
         <main className="HomePage">
-          <section className="Main" />
-          <section className="Sidebar">
-            <Birbs count={50} />
+          <section className="sidebar">
+            <Birbs />
             <NowPlaying />
           </section>
+          <section className="main" />
         </main>
       </Route>
 

@@ -67,30 +67,30 @@ main {
   &.HomePage {
     display: grid;
     grid-template-areas: 'side main';
-    grid-template-columns: 25% 75%;
+    grid-template-columns: 25vw 75vw;
     grid-template-rows: 1fr;
+
+    .sidebar {
+      grid-area: side;
+
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+
+      background: var(--bg-color);
+      height: 100%;
+    }
+
+    .main {
+      grid-area: main;
+
+      height: 100%;
+    }
   }
 
   &.BirbsPage {
     background: var(--bg-color);
   }
-}
-
-.Main {
-  grid-area: main;
-
-  height: 100%;
-}
-
-.Sidebar {
-  grid-area: side;
-
-  display: flex;
-  flex-direction: column;
-  gap: 0.5em;
-
-  background: var(--bg-color);
-  height: 100%;
 }
 
 .Backgrounded {
@@ -128,15 +128,19 @@ main {
 .Marquee {
   --marquee-gap: 6em;
 
-  min-height: 1lh;
-
   display: flex;
   gap: var(--marquee-gap);
   overflow: hidden;
 
-  & > span {
+  > span {
     display: block;
     white-space: nowrap;
+
+    // Always reserve the height of one line of text for an empty Marquee
+    &:empty::after {
+      content: '.';
+      visibility: hidden;
+    }
   }
 
   &.scroll > span {
@@ -163,10 +167,6 @@ main {
 }
 
 .Janktuber {
-  video {
-    display: none;
-  }
-
   .container {
     width: 500px;
     height: 500px;
