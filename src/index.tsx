@@ -5,6 +5,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { Route, Switch } from 'wouter';
 
 import { Flock } from './birbs';
+import { Janktuber } from './janktuber';
 
 const API_URL = 'http://localhost:8000';
 const WS_URL = 'ws://localhost:8000';
@@ -25,6 +26,12 @@ export function App() {
       <Route path="/birbs">
         <main className="BirbsPage">
           <Birbs count={200} cameraVerticalAdjustment={300} />
+        </main>
+      </Route>
+
+      <Route path="/janktuber">
+        <main className="JanktuberPage">
+          <Janktuber />
         </main>
       </Route>
     </Switch>
