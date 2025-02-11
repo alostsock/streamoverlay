@@ -13,7 +13,10 @@ export function App() {
       <Route path="/">
         <main className="HomePage">
           <section className="sidebar">
-            <Birbs />
+            <div className="visuals">
+              <Birbs />
+              <Janktuber />
+            </div>
             <NowPlaying />
           </section>
           <section className="main" />

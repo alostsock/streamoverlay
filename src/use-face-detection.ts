@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
 const DETECTION_RATE = 1.0 / 20;
+const SCALE = 10;
 
 // https://storage.googleapis.com/mediapipe-assets/documentation/mediapipe_face_landmark_fullsize.png
 const LANDMARK_INDICES = {
@@ -16,7 +17,7 @@ const LANDMARK_INDICES = {
   lipLower: 16,
 } as const;
 
-const LANDMARK_NAMES = Object.keys(LANDMARK_INDICES) as Array<keyof typeof LANDMARK_INDICES>;
+export const LANDMARK_NAMES = Object.keys(LANDMARK_INDICES) as Array<keyof typeof LANDMARK_INDICES>;
 
 const BLENDSHAPE_INDICES = {
   browOuterUpLeft: 4,
@@ -28,7 +29,9 @@ const BLENDSHAPE_INDICES = {
   mouthSmileRight: 45,
 } as const;
 
-const BLENDSHAPE_NAMES = Object.keys(BLENDSHAPE_INDICES) as Array<keyof typeof BLENDSHAPE_INDICES>;
+export const BLENDSHAPE_NAMES = Object.keys(BLENDSHAPE_INDICES) as Array<
+  keyof typeof BLENDSHAPE_INDICES
+>;
 
 export type Position = { x: number; y: number; z: number };
 

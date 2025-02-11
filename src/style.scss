@@ -79,6 +79,21 @@ main {
 
       background: var(--bg-color);
       height: 100%;
+
+      .visuals {
+        width: 100%;
+        height: 100%;
+
+        position: relative;
+
+
+        .Janktuber {
+          height: 40%;
+
+          position: absolute;
+          bottom: 0;
+        }
+      }
     }
 
     .main {
@@ -167,8 +182,33 @@ main {
 }
 
 .Janktuber {
+  position: relative;
+
+  container-type: size;
+
+  &,
   .container {
-    width: 500px;
-    height: 500px;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 16/9;
+  }
+
+  .debug {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    font-size: 3cqmin;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    padding: 1em;
+    opacity: 0.4;
+
+    pre {
+      margin: 0;
+    }
   }
 }
