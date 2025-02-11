@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
+import * as THREE from 'three';
 
 import { useFaceDetection, LandmarkData, BlendshapeData } from './use-face-detection';
 
@@ -13,10 +14,18 @@ export function Janktuber() {
   useEffect(() => {
     if (!detectFace || !containerEl) return;
 
-    let stopped = false;
+    const width = containerEl.clientWidth;
+    const height = containerEl.clientHeight;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
+    camera.position.z = 10;
 
-    const renderLoop = () => {
-      if (stopped) return;
+    // const ambientLight = new THREE.HemisphereLight(this.colors.sky, this.colors.ground, 3);
+    // scene.add(ambientLight);
+
+    const clock = new THREE.Clock();
+    const animate = () => {
+      const delta = clock.getDelta();
 
       const result = detectFace();
       if (result) {
@@ -24,16 +33,15 @@ export function Janktuber() {
         setBlendshapes(result.blendshapes);
       }
 
-      requestAnimationFrame(() => {
-        renderLoop();
-      });
+      renderer.render(scene, camera);
     };
 
-    renderLoop();
-
-    return () => {
-      stopped = true;
-    };
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setClearColor(0x0, 0);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(width, height);
+    renderer.setAnimationLoop(animate);
+    containerEl.appendChild(renderer.domElement);
   }, [detectFace, containerEl]);
 
   return (

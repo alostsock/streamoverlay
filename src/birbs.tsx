@@ -1,21 +1,45 @@
+import { useState, useEffect } from 'preact/hooks';
 import * as THREE from 'three';
 
-import { DEBUG, deg, rand, color, getBoundingBoxToPointVec } from './three-utils';
+import { Backgrounded } from './backgrounded';
+import { DEBUG, deg, rand, getCssColor, getBoundingBoxToPointVec } from './three-utils';
 
-export class Flock {
+export function Birbs({
+  count,
+  cameraVerticalAdjustment,
+}: {
+  count?: number;
+  cameraVerticalAdjustment?: number;
+}) {
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!containerEl) return;
+
+    new Flock(containerEl, count, cameraVerticalAdjustment).render();
+  }, [containerEl]);
+
+  return (
+    <Backgrounded pattern="lines" gradient className="Birbs">
+      <div ref={setContainerEl} className="container" />
+    </Backgrounded>
+  );
+}
+
+class Flock {
   birbs: Birb[];
 
   boundingBox = new THREE.Box3(new THREE.Vector3(-400, 0, -500), new THREE.Vector3(1000, 800, 150));
 
   colors = {
-    sky: color('--text-color'),
-    ground: color('--text-shadow-color'),
-    birb: color('--text-color'),
+    sky: getCssColor('--text-color'),
+    ground: getCssColor('--text-shadow-color'),
+    birb: getCssColor('--text-color'),
   } as const;
 
   constructor(
     private containerEl: HTMLDivElement,
-    private count = 100,
+    private count = 50,
     private cameraVerticalAdjustment = 0,
   ) {
     this.birbs = new Array(count)
@@ -82,11 +106,10 @@ export class Flock {
     this.containerEl.appendChild(renderer.domElement);
 
     if (import.meta.hot) {
-      // Handle HMR, since preact won't (and shouldn't) rerender this
       import.meta.hot.accept((newModule) => {
         if (newModule) {
           renderer.setAnimationLoop(null);
-          while (this.containerEl.children.length > 0) {
+          while (this.containerEl.firstChild) {
             this.containerEl.removeChild(this.containerEl.firstChild);
           }
           const NewFlock: typeof Flock = newModule.Flock;

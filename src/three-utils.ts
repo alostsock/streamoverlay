@@ -6,7 +6,7 @@ export const deg = (x: number) => (x * 2 * Math.PI) / 360;
 
 export const rand = (min: number, max: number) => min + (max - min) * Math.random();
 
-export const color = (colorVar: string, el: HTMLElement = document.documentElement) => {
+export const getCssColor = (colorVar: string, el: HTMLElement = document.documentElement) => {
   const cssColor = window.getComputedStyle(el).getPropertyValue(colorVar);
   const hex = parseInt(cssColor.replace('#', ''), 16);
   return new THREE.Color().setHex(hex);
@@ -23,8 +23,8 @@ export const getBoundingBoxToPointVec = (
   maxDistance: number,
 ) => {
   let minDistance = maxDistance;
-  let minSide = 'min';
-  let minAxis = 'x';
+  let minSide: 'min' | 'max' = 'min';
+  let minAxis: 'x' | 'y' | 'z' = 'x';
 
   for (const side of ['min', 'max'] as const) {
     for (const axis of ['x', 'y', 'z'] as const) {
