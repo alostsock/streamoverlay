@@ -58,6 +58,7 @@ export function useFaceDetection(videoEl: HTMLVideoElement | null) {
         FaceLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: '/face-detection/face_landmarker.task',
+            delegate: 'GPU',
           },
           outputFaceBlendshapes: true,
           runningMode: 'VIDEO',

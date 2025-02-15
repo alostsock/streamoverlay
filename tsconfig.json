@@ -17,5 +17,6 @@
 		},
 		"strict": true
 	},
-	"include": ["node_modules/vite/client.d.ts", "**/*"]
+	"include": ["node_modules/vite/client.d.ts", "**/*"],
+	"exclude": ["public/"]
 }

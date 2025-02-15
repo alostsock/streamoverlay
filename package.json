@@ -25,7 +25,10 @@
     "vite": "^6.0.4"
   },
   "eslintConfig": {
-    "extends": "preact"
+    "extends": "preact",
+    "ignorePatterns": [
+      "public/"
+    ]
   },
   "prettier": {
     "singleQuote": true,
