@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export const smoothed = (fn: (input: number) => number, depth = 3) => {
   const prevOutputs: number[] = [];
 
@@ -41,6 +43,17 @@ export const clamp = (val: number, correction: number, min: number, max: number)
   const correctedVal = val + correction;
   const clamped = Math.min(Math.max(correctedVal, min), max);
   return (clamped - min) / (max - min);
+};
+
+export const averagePointEstimator = () => {
+  const bb = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+  const center = new THREE.Vector3();
+
+  return (p: THREE.Vector3) => {
+    bb.expandByPoint(p);
+    bb.getCenter(center);
+    return center;
+  };
 };
 
 // https://easings.net

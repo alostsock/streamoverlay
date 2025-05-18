@@ -12,6 +12,7 @@ import {
 } from './use-face-detection';
 import { DEBUG, deg, getCssColor } from './three-utils';
 import {
+  averagePointEstimator,
   clamp,
   easeInOutQuad,
   easeOutCubic,
@@ -142,6 +143,7 @@ class Renderer {
     };
 
     const faceOrigin = new Landmark(this.colors.accent, 0.3, 4);
+    const averageFaceOrigin = new Landmark(this.colors.ground, 0.2, 4);
     let faceUpward = new THREE.Vector3();
     let faceForward = new THREE.Vector3();
 
@@ -152,11 +154,13 @@ class Renderer {
         scene.add(landmarks[name].obj);
       }
       scene.add(faceOrigin.obj);
+      scene.add(averageFaceOrigin.obj);
       // scene.add(modelBaseOrigin.obj);
     }
 
-    // These interpolation functions store cached values. They should be defined
-    // only once, outside the `animate` function.
+    // These functions store cached values. They should be defined only once,
+    // outside the `animate` function.
+    const estimateAverageFaceOrigin = averagePointEstimator();
     const jawAngleInterpolation = smoothed((jawOpen: number) => {
       const [correction, min, max] = [-0.01, 0.005, 0.3];
       const maxJawAngle = -deg(30);
@@ -170,7 +174,7 @@ class Renderer {
       return min + rollRatio * (max - min);
     });
     const pitchInterpolation = smoothed((pitchAngle: number) => {
-      const [correction, min, max] = [0, -deg(95), deg(95)];
+      const [correction, min, max] = [deg(5), -deg(95), deg(95)];
       const pitchRatio = easeInOutQuad(clamp(pitchAngle, correction, min, max));
       return min + pitchRatio * (max - min);
     });
@@ -179,10 +183,25 @@ class Renderer {
       const yawRatio = easeInOutQuad(clamp(yawAngle, correction, min, max));
       return min + yawRatio * (max - min);
     });
+    const xInterpolation = smoothed((distance: number) => {
+      const [correction, min, max] = [0, -2, 2];
+      const distanceRatio = easeInOutQuad(clamp(distance, correction, min, max));
+      return min + distanceRatio * (max - min);
+    });
+    const yInterpolation = smoothed((distance: number) => {
+      const [correction, min, max] = [0, -2.5, 1.5];
+      const distanceRatio = easeInOutQuad(clamp(distance, correction, min, max));
+      return min + distanceRatio * (max - min);
+    });
+    const zInterpolation = smoothed((distance: number) => {
+      const [correction, min, max] = [0, 0.5, 2];
+      const distanceRatio = easeInOutQuad(clamp(distance, correction, min, max));
+      return min + distanceRatio * (max - min);
+    });
 
-    const clock = new THREE.Clock();
+    // const clock = new THREE.Clock();
     const animate = () => {
-      const delta = clock.getDelta();
+      // const delta = clock.getDelta();
 
       const result = this.detectFace();
 
@@ -221,9 +240,13 @@ class Renderer {
 
         const faceWidth = landmarks.faceLeft.position.distanceTo(landmarks.faceRight.position);
         const offset = normal.multiplyScalar(faceWidth * 0.25);
-        const origin = midpoint.clone().sub(offset);
 
+        const origin = midpoint.clone().sub(offset);
         faceOrigin.position.set(origin.x, origin.y, origin.z);
+
+        const averageOrigin = estimateAverageFaceOrigin(origin);
+        averageFaceOrigin.position.set(averageOrigin.x, averageOrigin.y, averageOrigin.z);
+
         faceUpward = vertAxis.normalize();
         faceForward = normal;
       }
@@ -247,18 +270,51 @@ class Renderer {
         // Roll
         const rawRollAngle = new THREE.Vector2(faceUpward.x, faceUpward.y).angle() - Math.PI / 2;
         const rollAngle = rollInterpolation(rawRollAngle);
-        const neckBone = modelBones.body[3];
-        neckBone.rotation.x = initialBoneSettings[neckBone.name].rotation.x + rollAngle;
+        const rollWeights = [0.1, 0.2, 0.1, 0.3, 0.3];
+        modelBones.body.forEach((bone, index) => {
+          bone.rotation.x =
+            initialBoneSettings![bone.name].rotation.x + rollWeights[index] * rollAngle;
+        });
 
         // Pitch
         const rawPitchAngle = new THREE.Vector2(faceForward.z, -faceForward.y).angle() - Math.PI;
         const pitchAngle = pitchInterpolation(rawPitchAngle);
-        neckBone.rotation.z = initialBoneSettings[neckBone.name].rotation.z + pitchAngle;
+        const pitchWeights = [0.1, 0.1, 0.2, 0.3, 0.3];
+        modelBones.body.forEach((bone, index) => {
+          bone.rotation.z =
+            initialBoneSettings![bone.name].rotation.z + pitchWeights[index] * pitchAngle;
+        });
 
         // Yaw
         const rawYawAngle = new THREE.Vector2(faceForward.z, -faceForward.x).angle() - Math.PI;
         const yawAngle = yawInterpolation(rawYawAngle);
-        neckBone.rotation.y = initialBoneSettings[neckBone.name].rotation.y + yawAngle;
+        const yawWeights = [0.1, 0.1, 0.2, 0.3, 0.3];
+        modelBones.body.forEach((bone, index) => {
+          bone.rotation.y =
+            initialBoneSettings![bone.name].rotation.y + yawWeights[index] * yawAngle;
+        });
+
+        // Squish/stretch
+        const distanceWeights = [0.1, 0.35, 0.35, 0.2, 0.0];
+
+        const xDistance = xInterpolation(faceOrigin.position.x - averageFaceOrigin.position.x);
+        modelBones.body.forEach((bone, index) => {
+          bone.position.x =
+            initialBoneSettings![bone.name].position.x +
+            (distanceWeights[index] * xDistance) / SCALE;
+        });
+        const yDistance = yInterpolation(faceOrigin.position.y - averageFaceOrigin.position.y);
+        modelBones.body.forEach((bone, index) => {
+          bone.position.y =
+            initialBoneSettings![bone.name].position.y +
+            (distanceWeights[index] * yDistance) / SCALE;
+        });
+        const zDistance = zInterpolation(faceOrigin.position.z - averageFaceOrigin.position.z);
+        modelBones.body.forEach((bone, index) => {
+          bone.position.z =
+            initialBoneSettings![bone.name].position.z +
+            (distanceWeights[index] * zDistance) / SCALE;
+        });
       }
 
       renderer.render(scene, camera);
