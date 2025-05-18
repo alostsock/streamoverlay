@@ -163,9 +163,7 @@ class Renderer {
       const jawOpenRatio = easeOutCubic(clamp(jawOpen, correction, min, max));
       return jawOpenRatio * maxJawAngle;
     });
-    const eyeBlinkInterpolation = throttledBlink((eyeBlink: number) => {
-      return eyeBlink > BLINK_THRESHOLD;
-    });
+    const eyeBlinkInterpolation = throttledBlink(BLINK_THRESHOLD);
     const rollInterpolation = smoothed((rollAngle: number) => {
       const [correction, min, max] = [0, -deg(95), deg(95)];
       const rollRatio = easeInOutQuad(clamp(rollAngle, correction, min, max));

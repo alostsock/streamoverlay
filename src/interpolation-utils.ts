@@ -11,24 +11,29 @@ export const smoothed = (fn: (input: number) => number, depth = 3) => {
   };
 };
 
-export const throttledBlink = (fn: (input: number) => boolean, intervalMs = 150) => {
+export const throttledBlink = (blinkThreshold = 0.6, duration = 150, interval = 500) => {
   let start = performance.now();
 
   return (input: number) => {
-    const shouldStart = fn(input);
+    const shouldStart = input > blinkThreshold;
     const now = performance.now();
     let elapsed = now - start;
 
-    if (shouldStart && elapsed > intervalMs) {
-      // Restart the animation
+    // Don't restart the animation too soon
+    if (shouldStart && elapsed > interval) {
       start = now;
       elapsed = 0;
     }
 
-    const progress = Math.min(elapsed / intervalMs, 1.0);
-    return progress < 0.5
-      ? easeInOutQuad(progress / 0.5)
-      : easeInOutQuad(1 - (progress - 0.5) / 0.5);
+    const progress = Math.min(elapsed / duration, 1.0);
+
+    if (progress < 0.5) {
+      // First half of blink; eye is closing
+      return easeInOutQuad(progress / 0.5);
+    } else {
+      // Second half; eye is opening
+      return easeInOutQuad(1 - (progress - 0.5) / 0.5);
+    }
   };
 };
 
