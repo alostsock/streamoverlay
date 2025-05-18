@@ -11,7 +11,13 @@ import {
   DetectFaceCallback,
 } from './use-face-detection';
 import { DEBUG, deg, getCssColor } from './three-utils';
-import { clamp, easeOutCubic, smoothed } from './interpolation-utils';
+import {
+  clamp,
+  easeInOutQuad,
+  easeOutCubic,
+  smoothed,
+  throttledBlink,
+} from './interpolation-utils';
 
 const SCALE = 10;
 const BLINK_THRESHOLD = 0.45;
@@ -146,17 +152,35 @@ class Renderer {
         scene.add(landmarks[name].obj);
       }
       scene.add(faceOrigin.obj);
-      scene.add(modelBaseOrigin.obj);
+      // scene.add(modelBaseOrigin.obj);
     }
 
-    // These smoothing functions store cached values. They should be defined
+    // These interpolation functions store cached values. They should be defined
     // only once, outside the `animate` function.
     const jawAngleInterpolation = smoothed((jawOpen: number) => {
       const [correction, min, max] = [-0.01, 0.005, 0.3];
       const maxJawAngle = -deg(30);
       const jawOpenRatio = easeOutCubic(clamp(jawOpen, correction, min, max));
       return jawOpenRatio * maxJawAngle;
-    }, 3);
+    });
+    const eyeBlinkInterpolation = throttledBlink((eyeBlink: number) => {
+      return eyeBlink > BLINK_THRESHOLD;
+    });
+    const rollInterpolation = smoothed((rollAngle: number) => {
+      const [correction, min, max] = [0, -deg(95), deg(95)];
+      const rollRatio = easeInOutQuad(clamp(rollAngle, correction, min, max));
+      return min + rollRatio * (max - min);
+    });
+    const pitchInterpolation = smoothed((pitchAngle: number) => {
+      const [correction, min, max] = [0, -deg(95), deg(95)];
+      const pitchRatio = easeInOutQuad(clamp(pitchAngle, correction, min, max));
+      return min + pitchRatio * (max - min);
+    });
+    const yawInterpolation = smoothed((yawAngle: number) => {
+      const [correction, min, max] = [-deg(10), -deg(95), deg(95)];
+      const yawRatio = easeInOutQuad(clamp(yawAngle, correction, min, max));
+      return min + yawRatio * (max - min);
+    });
 
     const clock = new THREE.Clock();
     const animate = () => {
@@ -206,7 +230,7 @@ class Renderer {
         faceForward = normal;
       }
 
-      if (modelBones && initialBoneSettings) {
+      if (modelBones && initialBoneSettings && eyeLMesh && eyeRMesh) {
         // Determine the model's base bone position
         const baseOrigin = new THREE.Vector3();
         modelBones.body[0].getWorldPosition(baseOrigin);
@@ -217,7 +241,26 @@ class Renderer {
         const jawBone = modelBones.jaw;
         jawBone.rotation.z = initialBoneSettings[jawBone.name].rotation.z + jawAngle;
 
-        // Eye animation
+        // Eye blinks
+        const eyeSize = eyeBlinkInterpolation(Math.max(eyeBlinkLeft, eyeBlinkRight));
+        eyeLMesh.morphTargetInfluences = [eyeSize];
+        eyeRMesh.morphTargetInfluences = [eyeSize];
+
+        // Roll
+        const rawRollAngle = new THREE.Vector2(faceUpward.x, faceUpward.y).angle() - Math.PI / 2;
+        const rollAngle = rollInterpolation(rawRollAngle);
+        const neckBone = modelBones.body[3];
+        neckBone.rotation.x = initialBoneSettings[neckBone.name].rotation.x + rollAngle;
+
+        // Pitch
+        const rawPitchAngle = new THREE.Vector2(faceForward.z, -faceForward.y).angle() - Math.PI;
+        const pitchAngle = pitchInterpolation(rawPitchAngle);
+        neckBone.rotation.z = initialBoneSettings[neckBone.name].rotation.z + pitchAngle;
+
+        // Yaw
+        const rawYawAngle = new THREE.Vector2(faceForward.z, -faceForward.x).angle() - Math.PI;
+        const yawAngle = yawInterpolation(rawYawAngle);
+        neckBone.rotation.y = initialBoneSettings[neckBone.name].rotation.y + yawAngle;
       }
 
       renderer.render(scene, camera);
@@ -245,8 +288,8 @@ class Renderer {
         const model = gltf.scene;
 
         model.scale.set(SCALE, SCALE, SCALE);
-        model.position.set(5, -0.7 * SCALE, 0);
-        model.rotateY(deg(-60));
+        model.position.set(4, -0.7 * SCALE, 0);
+        model.rotateY(deg(-80));
         model.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
             if (obj.name == 'EyeL' || obj.name == 'EyeR') {

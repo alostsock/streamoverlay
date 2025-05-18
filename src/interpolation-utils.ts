@@ -11,13 +11,37 @@ export const smoothed = (fn: (input: number) => number, depth = 3) => {
   };
 };
 
+export const throttledBlink = (fn: (input: number) => boolean, intervalMs = 150) => {
+  let start = performance.now();
+
+  return (input: number) => {
+    const shouldStart = fn(input);
+    const now = performance.now();
+    let elapsed = now - start;
+
+    if (shouldStart && elapsed > intervalMs) {
+      // Restart the animation
+      start = now;
+      elapsed = 0;
+    }
+
+    const progress = Math.min(elapsed / intervalMs, 1.0);
+    return progress < 0.5
+      ? easeInOutQuad(progress / 0.5)
+      : easeInOutQuad(1 - (progress - 0.5) / 0.5);
+  };
+};
+
 export const clamp = (val: number, correction: number, min: number, max: number) => {
   const correctedVal = val + correction;
   const clamped = Math.min(Math.max(correctedVal, min), max);
-  return (clamped - min) / max;
+  return (clamped - min) / (max - min);
 };
 
 // https://easings.net
+export function easeInQuad(x: number): number {
+  return x * x;
+}
 export function easeInOutQuad(x: number): number {
   return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
 }
