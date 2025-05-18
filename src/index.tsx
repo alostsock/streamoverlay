@@ -23,6 +23,15 @@ export function App() {
         </main>
       </Route>
 
+      <Route path="/fullscreen">
+        <main className="FullscreenPage">
+          <div className="topbar">
+            <NowPlaying inline />
+          </div>
+          <Janktuber />
+        </main>
+      </Route>
+
       <Route path="/birbs">
         <main className="BirbsPage">
           <Birbs count={200} cameraVerticalAdjustment={300} />

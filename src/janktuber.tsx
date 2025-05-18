@@ -19,8 +19,8 @@ import {
   throttledBlink,
 } from './interpolation-utils';
 
-const SCALE = 10;
-const BLINK_THRESHOLD = 0.55;
+const SCALE = 12;
+const BLINK_THRESHOLD = 0.6;
 
 export function Janktuber() {
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
@@ -105,7 +105,7 @@ class Renderer {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 40);
     camera.position.z = 1.6 * SCALE;
-    camera.rotateX(deg(-10));
+    camera.rotateX(deg(-5));
 
     const ambientLight = new THREE.HemisphereLight(this.colors.sky, this.colors.ground, 3);
     scene.add(ambientLight);
@@ -177,7 +177,7 @@ class Renderer {
       return min + pitchRatio * (max - min);
     });
     const yawInterpolation = smoothed((yawAngle: number) => {
-      const [correction, min, max] = [-deg(10), -deg(95), deg(95)];
+      const [correction, min, max] = [-deg(5), -deg(95), deg(95)];
       const yawRatio = easeInOutQuad(clamp(yawAngle, correction, min, max));
       return min + yawRatio * (max - min);
     });
@@ -288,8 +288,8 @@ class Renderer {
         const model = gltf.scene;
 
         model.scale.set(SCALE, SCALE, SCALE);
-        model.position.set(4, -0.7 * SCALE, 0);
-        model.rotateY(deg(-80));
+        model.position.set(DEBUG ? 4 : -1, -0.65 * SCALE, 0);
+        model.rotateY(DEBUG ? deg(-80) : deg(-50));
         model.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
             if (obj.name == 'EyeL' || obj.name == 'EyeR') {

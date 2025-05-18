@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export const DEBUG = true;
+export const DEBUG = false;
 
 export const deg = (x: number) => (x * 2 * Math.PI) / 360;
 
