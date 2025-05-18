@@ -106,6 +106,10 @@ main {
   &.BirbsPage {
     background: var(--bg-color);
   }
+
+  &.JanktuberPage {
+    border: 1px solid var(--orange-5);
+  }
 }
 
 .Backgrounded {

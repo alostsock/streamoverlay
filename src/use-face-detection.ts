@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
-const DETECTION_RATE = 1.0 / 20;
-const SCALE = 10;
+const DETECTION_RATE = 1.0 / 30;
 
 // https://storage.googleapis.com/mediapipe-assets/documentation/mediapipe_face_landmark_fullsize.png
 const LANDMARK_INDICES = {

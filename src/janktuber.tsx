@@ -10,7 +10,8 @@ import {
   BLENDSHAPE_NAMES,
   DetectFaceCallback,
 } from './use-face-detection';
-import { deg, getCssColor } from './three-utils';
+import { DEBUG, deg, getCssColor } from './three-utils';
+import { clamp, easeOutCubic, smoothed } from './interpolation-utils';
 
 const SCALE = 10;
 const BLINK_THRESHOLD = 0.45;
@@ -44,25 +45,41 @@ export function Janktuber() {
 
       <div ref={setContainerEl} className="container" />
 
-      <div className="debug">
-        <pre>
-          <code>{formatLandmarksDebug(landmarks)}</code>
-        </pre>
+      {DEBUG && (
+        <div className="debug">
+          <pre>
+            <code>{formatLandmarksDebug(landmarks)}</code>
+          </pre>
 
-        <pre>
-          <code>{formatBlendshapesDebug(blendshapes)}</code>
-        </pre>
-      </div>
+          <pre>
+            <code>{formatBlendshapesDebug(blendshapes)}</code>
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
+
+type ModelBones = {
+  tail: THREE.Bone[];
+  body: THREE.Bone[];
+  muzzle: THREE.Bone;
+  jaw: THREE.Bone;
+  earL: THREE.Bone;
+  earR: THREE.Bone;
+  eyeL: THREE.Bone;
+  eyeR: THREE.Bone;
+};
+
+type BoneSettings = Record<string, { position: THREE.Vector3; rotation: THREE.Euler }>;
 
 class Renderer {
   colors = {
     sky: getCssColor('--text-color'),
     ground: getCssColor('--text-shadow-color'),
     base: getCssColor('--text-color'),
-    active: getCssColor('--orange-5'),
+    active: getCssColor('--orange-6'),
+    accent: getCssColor('--orange-5'),
   };
 
   constructor(
@@ -71,40 +88,40 @@ class Renderer {
   ) {}
 
   render() {
+    if (this.containerEl.children.length > 1) {
+      location.reload();
+    }
+
+    console.log('starting model render loop');
+
     const width = this.containerEl.clientWidth;
     const height = this.containerEl.clientHeight;
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
-    camera.position.z = 0.7 * SCALE;
+    const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 40);
+    camera.position.z = 1.6 * SCALE;
+    camera.rotateX(deg(-10));
 
     const ambientLight = new THREE.HemisphereLight(this.colors.sky, this.colors.ground, 3);
     scene.add(ambientLight);
 
-    const loader = new GLTFLoader();
-    loader.load(
-      '/janktuber_v1.glb',
-      (gltf) => {
-        const model = gltf.scene;
-        model.scale.set(8, 8, 8);
-        model.position.set(0, -4, 0);
-        model.rotateY(deg(-45));
-        model.traverse((obj) => {
-          if (obj instanceof THREE.Mesh) {
-            obj.material = new THREE.MeshPhongMaterial({
-              color: this.colors.base,
-              wireframe: false,
-            });
-          }
-        });
-        const bbox = new THREE.Box3().setFromObject(model);
-        console.log(bbox);
-        scene.add(gltf.scene);
-      },
-      undefined,
-      (error) => {
-        console.error(error);
-      },
-    );
+    let eyeLMesh: THREE.SkinnedMesh | null = null;
+    let eyeRMesh: THREE.SkinnedMesh | null = null;
+    let modelBones: ModelBones | null = null;
+    let initialBoneSettings: BoneSettings | null = null;
+    this.loadModel((model, bones, boneSettings) => {
+      const eyeL = model.getObjectByName('EyeL');
+      if (eyeL && eyeL instanceof THREE.SkinnedMesh) {
+        eyeLMesh = eyeL;
+      }
+      const eyeR = model.getObjectByName('EyeR');
+      if (eyeR && eyeR instanceof THREE.SkinnedMesh) {
+        eyeRMesh = eyeR;
+      }
+
+      modelBones = bones;
+      initialBoneSettings = boneSettings;
+      scene.add(model);
+    });
 
     const landmarks: Record<keyof LandmarkData, Landmark> = {
       faceTop: new Landmark(this.colors.base),
@@ -118,33 +135,89 @@ class Renderer {
       lipLower: new Landmark(this.colors.base),
     };
 
-    for (const name of LANDMARK_NAMES) {
-      scene.add(landmarks[name].obj);
+    const faceOrigin = new Landmark(this.colors.accent, 0.3, 4);
+    let faceUpward = new THREE.Vector3();
+    let faceForward = new THREE.Vector3();
+
+    const modelBaseOrigin = new Landmark(this.colors.accent, 1.5, 4);
+
+    if (DEBUG) {
+      for (const name of LANDMARK_NAMES) {
+        scene.add(landmarks[name].obj);
+      }
+      scene.add(faceOrigin.obj);
+      scene.add(modelBaseOrigin.obj);
     }
+
+    // These smoothing functions store cached values. They should be defined
+    // only once, outside the `animate` function.
+    const jawAngleInterpolation = smoothed((jawOpen: number) => {
+      const [correction, min, max] = [-0.01, 0.005, 0.3];
+      const maxJawAngle = -deg(30);
+      const jawOpenRatio = easeOutCubic(clamp(jawOpen, correction, min, max));
+      return jawOpenRatio * maxJawAngle;
+    }, 3);
 
     const clock = new THREE.Clock();
     const animate = () => {
       const delta = clock.getDelta();
 
       const result = this.detectFace();
-      if (result) {
-        for (const name of LANDMARK_NAMES) {
-          // Map face coords to world coords
-          landmarks[name].position.x = -(-0.5 + result.landmarks[name].x) * SCALE;
-          landmarks[name].position.y = (0.5 - result.landmarks[name].y) * SCALE;
-          landmarks[name].position.z = result.landmarks[name].z * SCALE;
-        }
 
-        if (
-          result.blendshapes.eyeBlinkLeft > BLINK_THRESHOLD ||
-          result.blendshapes.eyeBlinkRight > BLINK_THRESHOLD
-        ) {
-          landmarks.eyeLeft.color = this.colors.active;
-          landmarks.eyeRight.color = this.colors.active;
-        } else {
-          landmarks.eyeLeft.color = this.colors.base;
-          landmarks.eyeRight.color = this.colors.base;
-        }
+      if (!result) {
+        renderer.render(scene, camera);
+        return;
+      }
+
+      for (const name of LANDMARK_NAMES) {
+        // Map face coords to world coords
+        landmarks[name].position.x = -(-0.5 + result.landmarks[name].x) * SCALE;
+        landmarks[name].position.y = (0.5 - result.landmarks[name].y) * SCALE;
+        landmarks[name].position.z = result.landmarks[name].z * SCALE;
+      }
+
+      const { eyeBlinkLeft, eyeBlinkRight, jawOpen } = result.blendshapes;
+
+      if (eyeBlinkLeft > BLINK_THRESHOLD || eyeBlinkRight > BLINK_THRESHOLD) {
+        landmarks.eyeLeft.color = this.colors.active;
+        landmarks.eyeRight.color = this.colors.active;
+      } else {
+        landmarks.eyeLeft.color = this.colors.base;
+        landmarks.eyeRight.color = this.colors.base;
+      }
+
+      // Determine head positioning
+      {
+        const midpoint = landmarks.faceLeft.position
+          .clone()
+          .add(landmarks.faceRight.position)
+          .divideScalar(2);
+
+        const horizAxis = landmarks.faceRight.position.clone().sub(landmarks.faceLeft.position);
+        const vertAxis = landmarks.faceTop.position.clone().sub(landmarks.faceBottom.position);
+        const normal = horizAxis.clone().cross(vertAxis).normalize();
+
+        const faceWidth = landmarks.faceLeft.position.distanceTo(landmarks.faceRight.position);
+        const offset = normal.multiplyScalar(faceWidth * 0.25);
+        const origin = midpoint.clone().sub(offset);
+
+        faceOrigin.position.set(origin.x, origin.y, origin.z);
+        faceUpward = vertAxis.normalize();
+        faceForward = normal;
+      }
+
+      if (modelBones && initialBoneSettings) {
+        // Determine the model's base bone position
+        const baseOrigin = new THREE.Vector3();
+        modelBones.body[0].getWorldPosition(baseOrigin);
+        modelBaseOrigin.position.set(baseOrigin.x, baseOrigin.y, baseOrigin.z);
+
+        // Jaw animation
+        const jawAngle = jawAngleInterpolation(jawOpen);
+        const jawBone = modelBones.jaw;
+        jawBone.rotation.z = initialBoneSettings[jawBone.name].rotation.z + jawAngle;
+
+        // Eye animation
       }
 
       renderer.render(scene, camera);
@@ -157,6 +230,75 @@ class Renderer {
     renderer.setAnimationLoop(animate);
     this.containerEl.appendChild(renderer.domElement);
   }
+
+  loadModel(
+    onLoad: (
+      model: THREE.Group<THREE.Object3DEventMap>,
+      bones: ModelBones,
+      initialBoneSettings: BoneSettings,
+    ) => void,
+  ) {
+    const loader = new GLTFLoader();
+    loader.load(
+      '/janktuber_v1.glb',
+      (gltf) => {
+        const model = gltf.scene;
+
+        model.scale.set(SCALE, SCALE, SCALE);
+        model.position.set(5, -0.7 * SCALE, 0);
+        model.rotateY(deg(-60));
+        model.traverse((obj) => {
+          if (obj instanceof THREE.Mesh) {
+            if (obj.name == 'EyeL' || obj.name == 'EyeR') {
+              obj.material = new THREE.MeshToonMaterial({
+                color: this.colors.accent,
+                wireframe: true,
+              });
+            } else {
+              obj.material = new THREE.MeshPhongMaterial({
+                color: this.colors.base,
+                wireframe: false,
+              });
+            }
+          }
+        });
+
+        const mesh = model.getObjectByName('Character') as THREE.SkinnedMesh;
+        const bones = mesh.skeleton.bones;
+        const modelBones: ModelBones = {
+          tail: bones
+            .filter((bone) =>
+              ['Bone001', 'Bone002', 'Bone003', 'Bone005', 'Bone006'].includes(bone.name),
+            )
+            .sort((a, b) => a.name.localeCompare(b.name)),
+          body: bones
+            .filter((bone) =>
+              ['Bone', 'Bone007', 'Bone008', 'Bone009', 'Bone010'].includes(bone.name),
+            )
+            .sort((a, b) => a.name.localeCompare(b.name)),
+          jaw: bones.find((bone) => bone.name == 'Bone012')!,
+          muzzle: bones.find((bone) => bone.name == 'Bone011')!,
+          earL: bones.find((bone) => bone.name == 'Bone013')!,
+          earR: bones.find((bone) => bone.name == 'Bone014')!,
+          eyeL: bones.find((bone) => bone.name == 'Bone004')!,
+          eyeR: bones.find((bone) => bone.name == 'Bone015')!,
+        };
+        const boneSettings = bones.reduce((settings, bone) => {
+          settings[bone.name] = {
+            position: bone.position.clone(),
+            rotation: bone.rotation.clone(),
+          };
+          return settings;
+        }, {} as BoneSettings);
+
+        onLoad(model, modelBones, boneSettings);
+      },
+      undefined,
+      (error) => {
+        console.error(error);
+      },
+    );
+  }
 }
 
 class Landmark {
@@ -164,8 +306,8 @@ class Landmark {
   material: THREE.MeshBasicMaterial;
   obj: THREE.Mesh;
 
-  constructor(color: THREE.Color) {
-    this.geometry = new THREE.CircleGeometry(0.2, 5);
+  constructor(color: THREE.Color, radius = 0.2, segments = 5) {
+    this.geometry = new THREE.CircleGeometry(radius, segments);
     this.material = new THREE.MeshBasicMaterial({ color });
     this.obj = new THREE.Mesh(this.geometry, this.material);
   }
