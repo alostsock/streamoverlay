@@ -20,7 +20,7 @@ import {
 } from './interpolation-utils';
 
 const SCALE = 10;
-const BLINK_THRESHOLD = 0.45;
+const BLINK_THRESHOLD = 0.55;
 
 export function Janktuber() {
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
