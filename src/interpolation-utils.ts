@@ -85,9 +85,8 @@ export const deadPoseAnimation = (
       start = now;
 
       if (isAlive && elapsed > delay && elapsed < delay + duration) {
-        // mid-dying animation
+        // mid-dying animation; attempt to continue where we left off
         offset = delay + duration - elapsed;
-        console.log('mid-animation');
       } else {
         offset = 0;
       }
@@ -95,7 +94,6 @@ export const deadPoseAnimation = (
 
     if (elapsed == 0 || elapsed < delay) {
       // not ready to transition
-      console.log('not ready');
       return null;
     }
 
@@ -106,6 +104,8 @@ export const deadPoseAnimation = (
       reverse ? ratio * a + (1 - ratio) * b : (1 - ratio) * a + ratio * b;
 
     return {
+      eyeMorph: applyRatio(eyeMorph, targetEyeMorph),
+      jawAngle: applyRatio(jawAngle, targetJawAngle),
       displacement: new THREE.Vector3(
         applyRatio(position.x, targetPosition.x),
         applyRatio(position.y, targetPosition.y),
@@ -116,8 +116,6 @@ export const deadPoseAnimation = (
         applyRatio(rotation.y, targetRotation.y),
         applyRatio(rotation.z, targetRotation.z),
       ),
-      eyeMorph: applyRatio(eyeMorph, targetEyeMorph),
-      jawAngle: applyRatio(jawAngle, targetJawAngle),
     };
   };
 };
