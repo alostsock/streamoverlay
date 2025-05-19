@@ -19,7 +19,7 @@ import {
   blinkAnimation,
   deadPoseAnimation,
   easeInOutQuad,
-  easeOutCubic,
+  easeOutCirc,
 } from './interpolation-utils';
 
 const RENDER_RATE = 1.0 / 30;
@@ -260,7 +260,7 @@ class Renderer {
         const eyeMorph = blinkAnimator(eyeBlink);
 
         const maxJawAngle = -deg(30);
-        const jawOpenRatio = easeOutCubic(clamp(jawOpen, -0.01, 0.005, 0.3));
+        const jawOpenRatio = easeOutCirc(clamp(jawOpen, -0.01, 0.005, 0.3));
         const jawAngle = jawOpenRatio * maxJawAngle;
 
         // Displacement
