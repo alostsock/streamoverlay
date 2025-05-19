@@ -166,19 +166,19 @@ class Renderer {
     const estimateAverageFaceOrigin = averagePointEstimator();
     const smoothTimeMs = 150;
     const smoothFrames = Math.floor(smoothTimeMs / 1000 / RENDER_RATE);
-    const rollInterp = smoothed(smoothFrames);
-    const yawInterp = smoothed(smoothFrames);
-    const pitchInterp = smoothed(smoothFrames);
+    const blinkAnimator = blinkAnimation(BLINK_THRESHOLD);
+    const jawAngleInterp = smoothed(Math.max(smoothFrames / 2, 1));
     const xInterp = smoothed(smoothFrames);
     const yInterp = smoothed(smoothFrames);
     const zInterp = smoothed(smoothFrames);
-    const blinkAnimator = blinkAnimation(BLINK_THRESHOLD);
-    const jawAngleInterp = smoothed(smoothFrames);
+    const rollInterp = smoothed(smoothFrames);
+    const yawInterp = smoothed(smoothFrames);
+    const pitchInterp = smoothed(smoothFrames);
     const deadPoseAnimator = deadPoseAnimation(
-      0.95,
-      deg(25),
-      new THREE.Vector3(-0.7, -2.1, -0.5),
-      new THREE.Vector3(0.9, -0.9, -0.3),
+      0.9,
+      -deg(25),
+      new THREE.Vector3(-0.7, -2, -0.5),
+      new THREE.Vector3(1, -0.95, -0.3),
     );
 
     let prevFaceResult: FaceResults | null = null;
