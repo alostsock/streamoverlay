@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
-const DETECTION_RATE = 1.0 / 30;
+const DETECTION_RATE = 1.0 / 20;
 
 // https://storage.googleapis.com/mediapipe-assets/documentation/mediapipe_face_landmark_fullsize.png
 const LANDMARK_INDICES = {
@@ -38,10 +38,12 @@ export type LandmarkData = Record<keyof typeof LANDMARK_INDICES, Position>;
 
 export type BlendshapeData = Record<keyof typeof BLENDSHAPE_INDICES, number>;
 
-export type DetectFaceCallback = () => {
+export type FaceResults = {
   readonly landmarks: LandmarkData;
   readonly blendshapes: BlendshapeData;
-} | null;
+};
+
+export type DetectFaceCallback = () => FaceResults | null;
 
 export function useFaceDetection(videoEl: HTMLVideoElement | null) {
   const [facemarker, setFacemarker] = useState<FaceLandmarker | null>(null);
@@ -94,9 +96,10 @@ export function useFaceDetection(videoEl: HTMLVideoElement | null) {
     if (!facemarker || !videoEl || !videoReady) return;
 
     let lastVideoTime = -1;
+    let prevResults: FaceResults | null = null;
 
     const detectFaceCallback: DetectFaceCallback = () => {
-      if (videoEl.currentTime - lastVideoTime < DETECTION_RATE) return null;
+      if (videoEl.currentTime - lastVideoTime < DETECTION_RATE) return prevResults;
 
       const { faceLandmarks, faceBlendshapes } = facemarker.detectForVideo(
         videoEl,
@@ -105,7 +108,10 @@ export function useFaceDetection(videoEl: HTMLVideoElement | null) {
 
       lastVideoTime = videoEl.currentTime;
 
-      if (!faceLandmarks[0] || !faceBlendshapes[0]) return null;
+      if (!faceLandmarks[0] || !faceBlendshapes[0]) {
+        prevResults = null;
+        return null;
+      }
 
       const landmarks = {} as LandmarkData;
       for (const landmarkName of LANDMARK_NAMES) {
@@ -118,7 +124,9 @@ export function useFaceDetection(videoEl: HTMLVideoElement | null) {
         blendshapes[blendshapeName] = score;
       }
 
-      return { landmarks, blendshapes } as const;
+      const results = { landmarks, blendshapes } as const;
+      prevResults = results;
+      return results;
     };
 
     setDetectFace(() => detectFaceCallback);

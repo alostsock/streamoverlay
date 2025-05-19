@@ -8,18 +8,21 @@ import {
   BlendshapeData,
   LANDMARK_NAMES,
   BLENDSHAPE_NAMES,
+  FaceResults,
   DetectFaceCallback,
 } from './use-face-detection';
 import { DEBUG, deg, getCssColor } from './three-utils';
 import {
-  averagePointEstimator,
   clamp,
+  smoothed,
+  averagePointEstimator,
+  blinkAnimation,
+  deadPoseAnimation,
   easeInOutQuad,
   easeOutCubic,
-  smoothed,
-  throttledBlink,
 } from './interpolation-utils';
 
+const RENDER_RATE = 1.0 / 30;
 const SCALE = 12;
 const BLINK_THRESHOLD = 0.6;
 
@@ -161,63 +164,59 @@ class Renderer {
     // These functions store cached values. They should be defined only once,
     // outside the `animate` function.
     const estimateAverageFaceOrigin = averagePointEstimator();
-    const jawAngleInterpolation = smoothed((jawOpen: number) => {
-      const [correction, min, max] = [-0.01, 0.005, 0.3];
-      const maxJawAngle = -deg(30);
-      const jawOpenRatio = easeOutCubic(clamp(jawOpen, correction, min, max));
-      return jawOpenRatio * maxJawAngle;
-    });
-    const eyeBlinkInterpolation = throttledBlink(BLINK_THRESHOLD);
-    const rollInterpolation = smoothed((rollAngle: number) => {
-      const [correction, min, max] = [0, -deg(95), deg(95)];
-      const rollRatio = easeInOutQuad(clamp(rollAngle, correction, min, max));
-      return min + rollRatio * (max - min);
-    });
-    const pitchInterpolation = smoothed((pitchAngle: number) => {
-      const [correction, min, max] = [deg(5), -deg(95), deg(95)];
-      const pitchRatio = easeInOutQuad(clamp(pitchAngle, correction, min, max));
-      return min + pitchRatio * (max - min);
-    });
-    const yawInterpolation = smoothed((yawAngle: number) => {
-      const [correction, min, max] = [-deg(5), -deg(95), deg(95)];
-      const yawRatio = easeInOutQuad(clamp(yawAngle, correction, min, max));
-      return min + yawRatio * (max - min);
-    });
-    const xInterpolation = smoothed((distance: number) => {
-      const [correction, min, max] = [0, -2, 2];
-      const distanceRatio = easeInOutQuad(clamp(distance, correction, min, max));
-      return min + distanceRatio * (max - min);
-    });
-    const yInterpolation = smoothed((distance: number) => {
-      const [correction, min, max] = [0, -2.5, 1.5];
-      const distanceRatio = easeInOutQuad(clamp(distance, correction, min, max));
-      return min + distanceRatio * (max - min);
-    });
-    const zInterpolation = smoothed((distance: number) => {
-      const [correction, min, max] = [0, 0.5, 2];
-      const distanceRatio = easeInOutQuad(clamp(distance, correction, min, max));
-      return min + distanceRatio * (max - min);
-    });
+    const smoothTimeMs = 150;
+    const smoothFrames = Math.floor(smoothTimeMs / 1000 / RENDER_RATE);
+    const rollInterp = smoothed(smoothFrames);
+    const yawInterp = smoothed(smoothFrames);
+    const pitchInterp = smoothed(smoothFrames);
+    const xInterp = smoothed(smoothFrames);
+    const yInterp = smoothed(smoothFrames);
+    const zInterp = smoothed(smoothFrames);
+    const blinkAnimator = blinkAnimation(BLINK_THRESHOLD);
+    const jawAngleInterp = smoothed(smoothFrames);
+    const deadPoseAnimator = deadPoseAnimation(
+      0.95,
+      deg(25),
+      new THREE.Vector3(-0.7, -2.1, -0.5),
+      new THREE.Vector3(0.9, -0.9, -0.3),
+    );
 
-    // const clock = new THREE.Clock();
+    let prevFaceResult: FaceResults | null = null;
+
+    const clock = new THREE.Clock();
+    let delta = 0;
+
     const animate = () => {
-      // const delta = clock.getDelta();
+      delta += clock.getDelta();
+      if (delta <= RENDER_RATE) {
+        return;
+      }
+      delta = delta % RENDER_RATE;
 
-      const result = this.detectFace();
+      let faceResult = this.detectFace();
 
-      if (!result) {
+      let isAlive = false;
+      if (!faceResult) {
+        isAlive = false;
+        faceResult = prevFaceResult;
+      } else {
+        isAlive = true;
+        prevFaceResult = faceResult;
+      }
+
+      if (!faceResult) {
         renderer.render(scene, camera);
         return;
       }
 
       for (const name of LANDMARK_NAMES) {
         // Map face coords to world coords
-        landmarks[name].position.x = -(-0.5 + result.landmarks[name].x) * SCALE;
-        landmarks[name].position.y = (0.5 - result.landmarks[name].y) * SCALE;
-        landmarks[name].position.z = result.landmarks[name].z * SCALE;
+        landmarks[name].position.x = -(-0.5 + faceResult.landmarks[name].x) * SCALE;
+        landmarks[name].position.y = (0.5 - faceResult.landmarks[name].y) * SCALE;
+        landmarks[name].position.z = faceResult.landmarks[name].z * SCALE;
       }
 
-      const { eyeBlinkLeft, eyeBlinkRight, jawOpen } = result.blendshapes;
+      const { eyeBlinkLeft, eyeBlinkRight, jawOpen } = faceResult.blendshapes;
 
       if (eyeBlinkLeft > BLINK_THRESHOLD || eyeBlinkRight > BLINK_THRESHOLD) {
         landmarks.eyeLeft.color = this.colors.active;
@@ -257,64 +256,114 @@ class Renderer {
         modelBones.body[0].getWorldPosition(baseOrigin);
         modelBaseOrigin.position.set(baseOrigin.x, baseOrigin.y, baseOrigin.z);
 
-        // Jaw animation
-        const jawAngle = jawAngleInterpolation(jawOpen);
-        const jawBone = modelBones.jaw;
-        jawBone.rotation.z = initialBoneSettings[jawBone.name].rotation.z + jawAngle;
+        const eyeBlink = Math.max(eyeBlinkLeft, eyeBlinkRight);
+        const eyeMorph = blinkAnimator(eyeBlink);
 
-        // Eye blinks
-        const eyeSize = eyeBlinkInterpolation(Math.max(eyeBlinkLeft, eyeBlinkRight));
-        eyeLMesh.morphTargetInfluences = [eyeSize];
-        eyeRMesh.morphTargetInfluences = [eyeSize];
+        const maxJawAngle = -deg(30);
+        const jawOpenRatio = easeOutCubic(clamp(jawOpen, -0.01, 0.005, 0.3));
+        const jawAngle = jawOpenRatio * maxJawAngle;
 
-        // Roll
+        // Displacement
+
+        const modelDisplacement = new THREE.Vector3();
+
+        const [xCorrection, xMin, xMax] = [0, -2, 2];
+        const xRaw = faceOrigin.position.x - averageFaceOrigin.position.x;
+        const xRatio = easeInOutQuad(clamp(xRaw, xCorrection, xMin, xMax));
+        modelDisplacement.x = xMin + xRatio * (xMax - xMin);
+
+        const [yCorrection, yMin, yMax] = [0, -2.5, 1.5];
+        const yRaw = faceOrigin.position.y - averageFaceOrigin.position.y;
+        const yRatio = easeInOutQuad(clamp(yRaw, yCorrection, yMin, yMax));
+        modelDisplacement.y = yMin + yRatio * (yMax - yMin);
+
+        const [zCorrection, zMin, zMax] = [0, 0.5, 2];
+        const zRaw = faceOrigin.position.z - averageFaceOrigin.position.z;
+        const zRatio = easeInOutQuad(clamp(zRaw, zCorrection, zMin, zMax));
+        modelDisplacement.z = zMin + zRatio * (zMax - zMin);
+
+        // Rotation
+
+        const modelRotation = new THREE.Vector3();
+        const [minAngle, maxAngle] = [-deg(95), deg(95)];
+
         const rawRollAngle = new THREE.Vector2(faceUpward.x, faceUpward.y).angle() - Math.PI / 2;
-        const rollAngle = rollInterpolation(rawRollAngle);
-        const rollWeights = [0.1, 0.2, 0.1, 0.3, 0.3];
-        modelBones.body.forEach((bone, index) => {
-          bone.rotation.x =
-            initialBoneSettings![bone.name].rotation.x + rollWeights[index] * rollAngle;
-        });
+        const rollRatio = easeInOutQuad(clamp(rawRollAngle, 0, minAngle, maxAngle));
+        modelRotation.x = minAngle + rollRatio * (maxAngle - minAngle);
 
-        // Pitch
-        const rawPitchAngle = new THREE.Vector2(faceForward.z, -faceForward.y).angle() - Math.PI;
-        const pitchAngle = pitchInterpolation(rawPitchAngle);
-        const pitchWeights = [0.1, 0.1, 0.2, 0.3, 0.3];
-        modelBones.body.forEach((bone, index) => {
-          bone.rotation.z =
-            initialBoneSettings![bone.name].rotation.z + pitchWeights[index] * pitchAngle;
-        });
-
-        // Yaw
         const rawYawAngle = new THREE.Vector2(faceForward.z, -faceForward.x).angle() - Math.PI;
-        const yawAngle = yawInterpolation(rawYawAngle);
-        const yawWeights = [0.1, 0.1, 0.2, 0.3, 0.3];
-        modelBones.body.forEach((bone, index) => {
-          bone.rotation.y =
-            initialBoneSettings![bone.name].rotation.y + yawWeights[index] * yawAngle;
-        });
+        const yawRatio = easeInOutQuad(clamp(rawYawAngle, -deg(5), minAngle, maxAngle));
+        modelRotation.y = minAngle + yawRatio * (maxAngle - minAngle);
 
-        // Squish/stretch
-        const distanceWeights = [0.1, 0.35, 0.35, 0.2, 0.0];
+        const rawPitchAngle = new THREE.Vector2(faceForward.z, -faceForward.y).angle() - Math.PI;
+        const pitchRatio = easeInOutQuad(clamp(rawPitchAngle, deg(5), minAngle, maxAngle));
+        modelRotation.z = minAngle + pitchRatio * (maxAngle - minAngle);
 
-        const xDistance = xInterpolation(faceOrigin.position.x - averageFaceOrigin.position.x);
-        modelBones.body.forEach((bone, index) => {
-          bone.position.x =
-            initialBoneSettings![bone.name].position.x +
-            (distanceWeights[index] * xDistance) / SCALE;
-        });
-        const yDistance = yInterpolation(faceOrigin.position.y - averageFaceOrigin.position.y);
-        modelBones.body.forEach((bone, index) => {
-          bone.position.y =
-            initialBoneSettings![bone.name].position.y +
-            (distanceWeights[index] * yDistance) / SCALE;
-        });
-        const zDistance = zInterpolation(faceOrigin.position.z - averageFaceOrigin.position.z);
-        modelBones.body.forEach((bone, index) => {
-          bone.position.z =
-            initialBoneSettings![bone.name].position.z +
-            (distanceWeights[index] * zDistance) / SCALE;
-        });
+        const applyInterpolations = (
+          eyeMorph: number,
+          jawAngle: number,
+          d: THREE.Vector3,
+          r: THREE.Vector3,
+        ) => {
+          eyeLMesh!.morphTargetInfluences = [eyeMorph];
+          eyeRMesh!.morphTargetInfluences = [eyeMorph];
+
+          const jawBone = modelBones!.jaw;
+          jawBone.rotation.z =
+            initialBoneSettings![jawBone.name].rotation.z + jawAngleInterp(jawAngle);
+
+          const distanceWeights = [0.1, 0.35, 0.35, 0.2, 0.0];
+          const dX = xInterp(d.x);
+          modelBones!.body.forEach((bone, index) => {
+            bone.position.x =
+              initialBoneSettings![bone.name].position.x + (distanceWeights[index] * dX) / SCALE;
+          });
+          const dY = yInterp(d.y);
+          modelBones!.body.forEach((bone, index) => {
+            bone.position.y =
+              initialBoneSettings![bone.name].position.y + (distanceWeights[index] * dY) / SCALE;
+          });
+          const dZ = zInterp(d.z);
+          modelBones!.body.forEach((bone, index) => {
+            bone.position.z =
+              initialBoneSettings![bone.name].position.z + (distanceWeights[index] * dZ) / SCALE;
+          });
+
+          const rollWeights = [0.1, 0.2, 0.1, 0.3, 0.3];
+          const rX = rollInterp(r.x);
+          modelBones!.body.forEach((bone, index) => {
+            bone.rotation.x = initialBoneSettings![bone.name].rotation.x + rollWeights[index] * rX;
+          });
+          const yawWeights = [0.1, 0.1, 0.2, 0.3, 0.3];
+          const rY = yawInterp(r.y);
+          modelBones!.body.forEach((bone, index) => {
+            bone.rotation.y = initialBoneSettings![bone.name].rotation.y + yawWeights[index] * rY;
+          });
+          const pitchWeights = [0.1, 0.1, 0.2, 0.3, 0.3];
+          const rZ = pitchInterp(r.z);
+          modelBones!.body.forEach((bone, index) => {
+            bone.rotation.z = initialBoneSettings![bone.name].rotation.z + pitchWeights[index] * rZ;
+          });
+        };
+
+        const deadPose = deadPoseAnimator(
+          isAlive,
+          eyeMorph,
+          jawAngle,
+          modelDisplacement,
+          modelRotation,
+        );
+
+        if (deadPose) {
+          applyInterpolations(
+            deadPose.eyeMorph,
+            deadPose.jawAngle,
+            deadPose.displacement,
+            deadPose.rotation,
+          );
+        } else {
+          applyInterpolations(eyeMorph, jawAngle, modelDisplacement, modelRotation);
+        }
       }
 
       renderer.render(scene, camera);
