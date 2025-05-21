@@ -3,6 +3,7 @@ import './style.scss';
 import { render } from 'preact';
 import { Route, Switch } from 'wouter';
 
+import { Clock } from './clock';
 import { NowPlaying } from './now-playing';
 import { Birbs } from './birbs';
 import { Janktuber } from './janktuber';
@@ -26,6 +27,7 @@ export function App() {
       <Route path="/fullscreen">
         <main className="FullscreenPage">
           <div className="topbar">
+            <Clock />
             <NowPlaying inline />
           </div>
           <Janktuber />
