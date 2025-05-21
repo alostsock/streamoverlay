@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 
-import { deg } from './three-utils';
-
 export const clamp = (val: number, correction: number, min: number, max: number) => {
   const correctedVal = val + correction;
   const clamped = Math.min(Math.max(correctedVal, min), max);
@@ -117,6 +115,22 @@ export const deadPoseAnimation = (
         applyRatio(rotation.z, targetRotation.z),
       ),
     };
+  };
+};
+
+export const tailAnimation = (duration = 2000, speedChangeInterval = 1300) => {
+  const start = performance.now();
+
+  return () => {
+    const now = performance.now();
+    const elapsed = now - start;
+    const progress = (elapsed % duration) / duration;
+
+    if (progress < 0.5) {
+      return easeInOutQuad(progress / 0.5) * 2 - 1;
+    } else {
+      return -1 * (easeInOutQuad((progress - 0.5) / 0.5) * 2 - 1);
+    }
   };
 };
 

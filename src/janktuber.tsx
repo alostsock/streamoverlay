@@ -20,6 +20,7 @@ import {
   deadPoseAnimation,
   easeInOutQuad,
   easeOutCirc,
+  tailAnimation,
 } from './interpolation-utils';
 
 const RENDER_RATE = 1.0 / 30;
@@ -180,6 +181,7 @@ class Renderer {
       new THREE.Vector3(-0.7, -2, -0.5),
       new THREE.Vector3(1, -0.95, -0.3),
     );
+    const tailAnimator = tailAnimation();
 
     let prevFaceResult: FaceResults | null = null;
 
@@ -343,6 +345,13 @@ class Renderer {
           const rZ = pitchInterp(r.z);
           modelBones!.body.forEach((bone, index) => {
             bone.rotation.z = initialBoneSettings![bone.name].rotation.z + pitchWeights[index] * rZ;
+          });
+
+          const tailAngle = deg(50) * tailAnimator();
+          const tailWeights = [0.05, 0.1, 0.25, 0.3, 0.3];
+          modelBones!.tail.forEach((bone, index) => {
+            bone.rotation.z =
+              initialBoneSettings![bone.name].rotation.z + tailWeights[index] * tailAngle;
           });
         };
 

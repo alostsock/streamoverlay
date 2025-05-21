@@ -5,7 +5,7 @@ from dotenv import dotenv_values
 
 @dataclass(frozen=True)
 class _Config:
-    now_playing_path: str
+    now_playing_path: str | None
 
 
 _env = dotenv_values()
