@@ -160,9 +160,26 @@ main {
   padding: 0.5em 0.75em;
   margin: 2px;
 
+  .foreground {
+    display: flex;
+    align-items: center;
+  }
+
   &.inline {
     padding: 0;
     margin: 0;
+
+    .icon {
+      font-size: 1.3em;
+      padding-right: 0.5em;
+      padding-bottom: 0.15em;
+    }
+  }
+
+  .icon {
+    font-size: 2em;
+    padding-right: 0.3em;
+    padding-bottom: 0.15em;
   }
 }
 

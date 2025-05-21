@@ -20,6 +20,9 @@ async def now_playing(websocket: WebSocket):
     now_playing = 'No BGM'
     last_time = None
 
+    if not path:
+        return
+
     try:
         while websocket.application_state == WebSocketState.CONNECTED:
             modified_time = os.stat(path).st_mtime

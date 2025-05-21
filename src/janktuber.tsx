@@ -400,7 +400,7 @@ class Renderer {
         const model = gltf.scene;
 
         model.scale.set(SCALE, SCALE, SCALE);
-        model.position.set(DEBUG ? 4 : -1, -0.65 * SCALE, 0);
+        model.position.set(DEBUG ? 4 : 0, -0.65 * SCALE, 0);
         model.rotateY(DEBUG ? deg(-80) : deg(-50));
         model.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
