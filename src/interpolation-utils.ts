@@ -118,14 +118,24 @@ export const deadPoseAnimation = (
   };
 };
 
-export const tailAnimation = (duration = 2000, speedChangeInterval = 1300) => {
-  const start = performance.now();
+export const tailAnimation = (duration = 2000, speedChangeInterval = 1200, minSpeed = 0.2) => {
+  let lastTime = performance.now();
+  let elapsed = 0;
+  let lastSpeedChange = performance.now();
+  let speed = 1.0;
 
   return () => {
     const now = performance.now();
-    const elapsed = now - start;
-    const progress = (elapsed % duration) / duration;
+    elapsed += (now - lastTime) * speed;
+    elapsed = elapsed % duration;
+    lastTime = now;
 
+    if (now - lastSpeedChange > speedChangeInterval) {
+      speed = minSpeed + Math.random() * (1 - minSpeed);
+      lastSpeedChange = now;
+    }
+
+    const progress = elapsed / duration;
     if (progress < 0.5) {
       return easeInOutQuad(progress / 0.5) * 2 - 1;
     } else {
