@@ -151,6 +151,11 @@ export function easeInOutQuad(x: number): number {
 export function easeOutCirc(x: number): number {
   return Math.sqrt(1 - Math.pow(x - 1, 2));
 }
+export function easeInOutCirc(x: number): number {
+  return x < 0.5
+    ? (1 - Math.sqrt(1 - Math.pow(2 * x, 2))) / 2
+    : (Math.sqrt(1 - Math.pow(-2 * x + 2, 2)) + 1) / 2;
+}
 export function easeOutExpo(x: number): number {
   return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
 }

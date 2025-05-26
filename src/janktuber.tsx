@@ -24,14 +24,16 @@ import {
   averagePointEstimator,
   blinkAnimation,
   deadPoseAnimation,
+  tailAnimation,
   easeInOutQuad,
   easeOutCirc,
-  tailAnimation,
+  easeInOutCirc,
 } from './interpolation-utils';
 
 const RENDER_RATE = 1.0 / 30;
 const SCALE = 12;
 const BLINK_THRESHOLD = 0.55;
+const MODEL_PATH = '/janktuber_v1_whiskers.glb';
 
 export function Janktuber() {
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
@@ -170,8 +172,8 @@ class Renderer {
     const smoothTimeMs = 200;
     const smoothFrames = Math.floor(smoothTimeMs / 1000 / RENDER_RATE);
     const blinkAnimator = blinkAnimation(BLINK_THRESHOLD);
-    const earLInterp = smoothed(smoothFrames);
-    const earRInterp = smoothed(smoothFrames);
+    const earLInterp = smoothed(smoothFrames * 2);
+    const earRInterp = smoothed(smoothFrames * 2);
     const jawAngleInterp = smoothed(Math.max(smoothFrames / 2, 1));
     const xInterp = smoothed(smoothFrames);
     const yInterp = smoothed(smoothFrames);
@@ -266,8 +268,8 @@ class Renderer {
         const eyeBlink = Math.max(eyeBlinkLeft, eyeBlinkRight);
         const eyeMorph = blinkAnimator(eyeBlink);
 
-        const earLAngle = deg(30) * easeOutCirc(clamp(browOuterUpLeft, -0.45, 0, 0.65));
-        const earRAngle = deg(-30) * easeOutCirc(clamp(browOuterUpRight, -0.25, 0, 0.65));
+        const earLAngle = deg(30) * easeInOutCirc(clamp(browOuterUpLeft, -0.15, 0, 0.4));
+        const earRAngle = deg(-30) * easeInOutCirc(clamp(browOuterUpRight, -0.15, 0, 0.4));
 
         const jawAngle = -deg(30) * easeOutCirc(clamp(jawOpen, -0.01, 0.005, 0.3));
 
@@ -422,7 +424,7 @@ class Renderer {
   ) {
     const loader = new GLTFLoader();
     loader.load(
-      '/janktuber_v1.glb',
+      MODEL_PATH,
       (gltf) => {
         const model = gltf.scene;
 
