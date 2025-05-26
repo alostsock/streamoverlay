@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'preact/hooks';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import {
+  EffectComposer,
+  RenderPixelatedPass,
+  RenderPass,
+  OutputPass,
+} from 'three/examples/jsm/Addons.js';
 
 import {
   useFaceDetection,
@@ -11,7 +17,7 @@ import {
   FaceResults,
   DetectFaceCallback,
 } from './use-face-detection';
-import { DEBUG, deg, getCssColor } from './three-utils';
+import { DEBUG, COLORS, POSTPROCESSING_MODE, PIXEL_SIZE, deg } from './three-utils';
 import {
   clamp,
   smoothed,
@@ -25,7 +31,7 @@ import {
 
 const RENDER_RATE = 1.0 / 30;
 const SCALE = 12;
-const BLINK_THRESHOLD = 0.6;
+const BLINK_THRESHOLD = 0.55;
 
 export function Janktuber() {
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
@@ -85,14 +91,6 @@ type ModelBones = {
 type BoneSettings = Record<string, { position: THREE.Vector3; rotation: THREE.Euler }>;
 
 class Renderer {
-  colors = {
-    sky: getCssColor('--text-color'),
-    ground: getCssColor('--text-shadow-color'),
-    base: getCssColor('--text-color'),
-    active: getCssColor('--orange-6'),
-    accent: getCssColor('--orange-5'),
-  };
-
   constructor(
     private containerEl: HTMLDivElement,
     private detectFace: DetectFaceCallback,
@@ -112,8 +110,12 @@ class Renderer {
     camera.position.z = 1.6 * SCALE;
     camera.rotateX(deg(-5));
 
-    const ambientLight = new THREE.HemisphereLight(this.colors.sky, this.colors.ground, 3);
+    const ambientLight = new THREE.HemisphereLight(COLORS.sky, COLORS.ground, 2);
     scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(COLORS.sky, 250.0);
+    pointLight.position.set(10, 7, 4);
+    scene.add(pointLight);
 
     let eyeLMesh: THREE.SkinnedMesh | null = null;
     let eyeRMesh: THREE.SkinnedMesh | null = null;
@@ -135,23 +137,23 @@ class Renderer {
     });
 
     const landmarks: Record<keyof LandmarkData, Landmark> = {
-      faceTop: new Landmark(this.colors.base),
-      faceLeft: new Landmark(this.colors.base),
-      faceBottom: new Landmark(this.colors.base),
-      faceRight: new Landmark(this.colors.base),
-      eyeLeft: new Landmark(this.colors.base),
-      eyeRight: new Landmark(this.colors.base),
-      nose: new Landmark(this.colors.base),
-      lipUpper: new Landmark(this.colors.base),
-      lipLower: new Landmark(this.colors.base),
+      faceTop: new Landmark(COLORS.base),
+      faceLeft: new Landmark(COLORS.base),
+      faceBottom: new Landmark(COLORS.base),
+      faceRight: new Landmark(COLORS.base),
+      eyeLeft: new Landmark(COLORS.base),
+      eyeRight: new Landmark(COLORS.base),
+      nose: new Landmark(COLORS.base),
+      lipUpper: new Landmark(COLORS.base),
+      lipLower: new Landmark(COLORS.base),
     };
 
-    const faceOrigin = new Landmark(this.colors.accent, 0.3, 4);
-    const averageFaceOrigin = new Landmark(this.colors.ground, 0.2, 4);
+    const faceOrigin = new Landmark(COLORS.accent, 0.3, 4);
+    const averageFaceOrigin = new Landmark(COLORS.ground, 0.2, 4);
     let faceUpward = new THREE.Vector3();
     let faceForward = new THREE.Vector3();
 
-    const modelBaseOrigin = new Landmark(this.colors.accent, 1.5, 4);
+    const modelBaseOrigin = new Landmark(COLORS.accent, 1.5, 4);
 
     if (DEBUG) {
       for (const name of LANDMARK_NAMES) {
@@ -165,7 +167,7 @@ class Renderer {
     // These functions store cached values. They should be defined only once,
     // outside the `animate` function.
     const estimateAverageFaceOrigin = averagePointEstimator();
-    const smoothTimeMs = 150;
+    const smoothTimeMs = 200;
     const smoothFrames = Math.floor(smoothTimeMs / 1000 / RENDER_RATE);
     const blinkAnimator = blinkAnimation(BLINK_THRESHOLD);
     const jawAngleInterp = smoothed(Math.max(smoothFrames / 2, 1));
@@ -221,11 +223,11 @@ class Renderer {
       const { eyeBlinkLeft, eyeBlinkRight, jawOpen } = faceResult.blendshapes;
 
       if (eyeBlinkLeft > BLINK_THRESHOLD || eyeBlinkRight > BLINK_THRESHOLD) {
-        landmarks.eyeLeft.color = this.colors.active;
-        landmarks.eyeRight.color = this.colors.active;
+        landmarks.eyeLeft.color = COLORS.active;
+        landmarks.eyeRight.color = COLORS.active;
       } else {
-        landmarks.eyeLeft.color = this.colors.base;
-        landmarks.eyeRight.color = this.colors.base;
+        landmarks.eyeLeft.color = COLORS.base;
+        landmarks.eyeRight.color = COLORS.base;
       }
 
       // Determine head positioning
@@ -375,7 +377,7 @@ class Renderer {
         }
       }
 
-      renderer.render(scene, camera);
+      composer.render();
     };
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -383,6 +385,15 @@ class Renderer {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(width, height);
     renderer.setAnimationLoop(animate);
+
+    const composer = new EffectComposer(renderer);
+    if (POSTPROCESSING_MODE === 'pixel') {
+      composer.addPass(new RenderPixelatedPass(PIXEL_SIZE, scene, camera));
+    } else {
+      composer.addPass(new RenderPass(scene, camera));
+    }
+    composer.addPass(new OutputPass());
+
     this.containerEl.appendChild(renderer.domElement);
   }
 
@@ -400,18 +411,18 @@ class Renderer {
         const model = gltf.scene;
 
         model.scale.set(SCALE, SCALE, SCALE);
-        model.position.set(DEBUG ? 4 : 0, -0.65 * SCALE, 0);
+        model.position.set(DEBUG ? 4 : 0, -0.7 * SCALE, 0);
         model.rotateY(DEBUG ? deg(-80) : deg(-50));
         model.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
             if (obj.name == 'EyeL' || obj.name == 'EyeR') {
               obj.material = new THREE.MeshToonMaterial({
-                color: this.colors.accent,
+                color: COLORS.accent,
                 wireframe: true,
               });
             } else {
-              obj.material = new THREE.MeshPhongMaterial({
-                color: this.colors.base,
+              obj.material = new THREE.MeshToonMaterial({
+                color: COLORS.base,
                 wireframe: false,
               });
             }

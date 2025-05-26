@@ -2,7 +2,23 @@ import { useState, useEffect } from 'preact/hooks';
 import * as THREE from 'three';
 
 import { Backgrounded } from './backgrounded';
-import { DEBUG, deg, rand, getCssColor, getBoundingBoxToPointVec } from './three-utils';
+import {
+  DEBUG,
+  COLORS,
+  POSTPROCESSING_MODE,
+  PIXEL_SIZE,
+  deg,
+  rand,
+  getBoundingBoxToPointVec,
+} from './three-utils';
+import {
+  EffectComposer,
+  OutputPass,
+  RenderPass,
+  RenderPixelatedPass,
+} from 'three/examples/jsm/Addons.js';
+
+const SCALE = 2.2;
 
 export function Birbs({
   count,
@@ -31,20 +47,12 @@ class Flock {
 
   boundingBox = new THREE.Box3(new THREE.Vector3(-400, 0, -500), new THREE.Vector3(1000, 800, 150));
 
-  colors = {
-    sky: getCssColor('--text-color'),
-    ground: getCssColor('--text-shadow-color'),
-    birb: getCssColor('--text-color'),
-  } as const;
-
   constructor(
     private containerEl: HTMLDivElement,
     private count = 50,
     private cameraVerticalAdjustment = 0,
   ) {
-    this.birbs = new Array(count)
-      .fill(null)
-      .map(() => new Birb(this.colors.birb, this.boundingBox));
+    this.birbs = new Array(count).fill(null).map(() => new Birb(COLORS.base, this.boundingBox));
   }
 
   private update(delta: number) {
@@ -79,7 +87,7 @@ class Flock {
     // gaze upward and to the right
     camera.setRotationFromAxisAngle(new THREE.Vector3(0.75, -1.5, 0), deg(15));
 
-    const ambientLight = new THREE.HemisphereLight(this.colors.sky, this.colors.ground, 3);
+    const ambientLight = new THREE.HemisphereLight(COLORS.sky, COLORS.ground, 3);
     scene.add(ambientLight);
 
     if (DEBUG) {
@@ -95,7 +103,7 @@ class Flock {
     const animate = () => {
       const delta = clock.getDelta();
       this.update(delta);
-      renderer.render(scene, camera);
+      composer.render();
     };
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -104,6 +112,14 @@ class Flock {
     renderer.setSize(width, height);
     renderer.setAnimationLoop(animate);
     this.containerEl.appendChild(renderer.domElement);
+
+    const composer = new EffectComposer(renderer);
+    if (POSTPROCESSING_MODE === 'pixel') {
+      composer.addPass(new RenderPixelatedPass(PIXEL_SIZE, scene, camera));
+    } else {
+      composer.addPass(new RenderPass(scene, camera));
+    }
+    composer.addPass(new OutputPass());
 
     if (import.meta.hot) {
       import.meta.hot.accept((newModule) => {
@@ -266,8 +282,7 @@ export class Birb {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-    geometry.scale(2.0, 2.0, 2.0);
-    // geometry.scale(1.75, 1.75, 1.75);
+    geometry.scale(SCALE, SCALE, SCALE);
 
     const material = new THREE.MeshPhongMaterial({
       color,

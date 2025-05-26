@@ -2,22 +2,33 @@ import * as THREE from 'three';
 
 export const DEBUG = false;
 
-export const deg = (x: number) => (x * 2 * Math.PI) / 360;
+export const POSTPROCESSING_MODE: 'pixel' | 'normal' = 'pixel';
+export const PIXEL_SIZE = 3;
 
-export const rand = (min: number, max: number) => min + (max - min) * Math.random();
-
-export const getCssColor = (colorVar: string, el: HTMLElement = document.documentElement) => {
+const getCssColor = (colorVar: string, el: HTMLElement = document.documentElement) => {
   const cssColor = window.getComputedStyle(el).getPropertyValue(colorVar);
   const hex = parseInt(cssColor.replace('#', ''), 16);
   return new THREE.Color().setHex(hex);
 };
 
-/**
+export const COLORS = {
+  sky: getCssColor('--text-color'),
+  ground: getCssColor('--text-shadow-color'),
+  base: getCssColor('--text-color'),
+  active: getCssColor('--active-color'),
+  accent: getCssColor('--accent-color'),
+};
+
+export const deg = (x: number) => (x * 2 * Math.PI) / 360;
+
+export const rand = (min: number, max: number) => min + (max - min) * Math.random();
+
+export /**
  * Returns the shortest vector from a bounding box to a point.
  * This assumes the point is inside the bounding box.
  * Returns `null` if the point is more than `maxDistance` away from the bounding box.
  */
-export const getBoundingBoxToPointVec = (
+const getBoundingBoxToPointVec = (
   boundingBox: THREE.Box3,
   point: THREE.Vector3,
   maxDistance: number,
