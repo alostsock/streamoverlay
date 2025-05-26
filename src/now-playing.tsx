@@ -38,18 +38,16 @@ export function NowPlaying({ inline = false }: { inline?: boolean }) {
     <Backgrounded pattern="dots" className={cls}>
       <span className="icon">♫</span>
       {showDetails ? (
-        <div>
-          {inline ? (
-            <Marquee>
-              {artist} - {track}
-            </Marquee>
-          ) : (
-            <>
-              <Marquee>{track}</Marquee>
-              <Marquee>{artist}</Marquee>
-            </>
-          )}
-        </div>
+        inline ? (
+          <Marquee>
+            {artist} - {track}
+          </Marquee>
+        ) : (
+          <div className="stacked">
+            <Marquee>{track}</Marquee>
+            <Marquee>{artist}</Marquee>
+          </div>
+        )
       ) : (
         <span>No BGM</span>
       )}
