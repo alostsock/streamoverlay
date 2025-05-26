@@ -170,6 +170,8 @@ class Renderer {
     const smoothTimeMs = 200;
     const smoothFrames = Math.floor(smoothTimeMs / 1000 / RENDER_RATE);
     const blinkAnimator = blinkAnimation(BLINK_THRESHOLD);
+    const earLInterp = smoothed(smoothFrames);
+    const earRInterp = smoothed(smoothFrames);
     const jawAngleInterp = smoothed(Math.max(smoothFrames / 2, 1));
     const xInterp = smoothed(smoothFrames);
     const yInterp = smoothed(smoothFrames);
@@ -220,7 +222,8 @@ class Renderer {
         landmarks[name].position.z = faceResult.landmarks[name].z * SCALE;
       }
 
-      const { eyeBlinkLeft, eyeBlinkRight, jawOpen } = faceResult.blendshapes;
+      const { eyeBlinkLeft, eyeBlinkRight, jawOpen, browOuterUpLeft, browOuterUpRight } =
+        faceResult.blendshapes;
 
       if (eyeBlinkLeft > BLINK_THRESHOLD || eyeBlinkRight > BLINK_THRESHOLD) {
         landmarks.eyeLeft.color = COLORS.active;
@@ -263,9 +266,10 @@ class Renderer {
         const eyeBlink = Math.max(eyeBlinkLeft, eyeBlinkRight);
         const eyeMorph = blinkAnimator(eyeBlink);
 
-        const maxJawAngle = -deg(30);
-        const jawOpenRatio = easeOutCirc(clamp(jawOpen, -0.01, 0.005, 0.3));
-        const jawAngle = jawOpenRatio * maxJawAngle;
+        const earLAngle = deg(30) * easeOutCirc(clamp(browOuterUpLeft, -0.45, 0, 0.65));
+        const earRAngle = deg(-30) * easeOutCirc(clamp(browOuterUpRight, -0.25, 0, 0.65));
+
+        const jawAngle = -deg(30) * easeOutCirc(clamp(jawOpen, -0.01, 0.005, 0.3));
 
         // Displacement
 
@@ -281,7 +285,7 @@ class Renderer {
         const yRatio = easeInOutQuad(clamp(yRaw, yCorrection, yMin, yMax));
         modelDisplacement.y = yMin + yRatio * (yMax - yMin);
 
-        const [zCorrection, zMin, zMax] = [0, 0.5, 2];
+        const [zCorrection, zMin, zMax] = [0, 0.5, 3];
         const zRaw = faceOrigin.position.z - averageFaceOrigin.position.z;
         const zRatio = easeInOutQuad(clamp(zRaw, zCorrection, zMin, zMax));
         modelDisplacement.z = zMin + zRatio * (zMax - zMin);
@@ -311,6 +315,18 @@ class Renderer {
         ) => {
           eyeLMesh!.morphTargetInfluences = [eyeMorph];
           eyeRMesh!.morphTargetInfluences = [eyeMorph];
+
+          const earLBone = modelBones!.earL;
+          const earLInterpAngle = earLInterp(earLAngle);
+          earLBone.rotation.x = initialBoneSettings![earLBone.name].rotation.x + earLInterpAngle;
+          earLBone.rotation.z =
+            initialBoneSettings![earLBone.name].rotation.z + earLInterpAngle / 2;
+
+          const earRBone = modelBones!.earR;
+          const earRInterpAngle = earRInterp(earRAngle);
+          earRBone.rotation.x = initialBoneSettings![earRBone.name].rotation.x + earRInterpAngle;
+          earRBone.rotation.z =
+            initialBoneSettings![earRBone.name].rotation.z + earRInterpAngle / 2;
 
           const jawBone = modelBones!.jaw;
           jawBone.rotation.z =
