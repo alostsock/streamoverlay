@@ -415,7 +415,7 @@ class Renderer {
         model.rotateY(DEBUG ? deg(-80) : deg(-50));
         model.traverse((obj) => {
           if (obj instanceof THREE.Mesh) {
-            if (obj.name == 'EyeL' || obj.name == 'EyeR') {
+            if (obj.name.startsWith('Eye') || obj.name.startsWith('Whisker')) {
               obj.material = new THREE.MeshToonMaterial({
                 color: COLORS.accent,
                 wireframe: true,

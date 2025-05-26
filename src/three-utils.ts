@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export const DEBUG = false;
 
-export const POSTPROCESSING_MODE: 'pixel' | 'normal' = 'pixel';
+export const POSTPROCESSING_MODE: 'pixel' | 'normal' = 'normal';
 export const PIXEL_SIZE = 3;
 
 const getCssColor = (colorVar: string, el: HTMLElement = document.documentElement) => {
