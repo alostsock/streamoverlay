@@ -5,10 +5,10 @@ export function Clock() {
   useEffect(() => {
     const update = () => {
       const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      const suffix = hours > 12 ? 'pm' : 'am';
-      setClockText(`${hours % 12}:${minutes}${suffix}`);
+      const hours = now.getHours() % 12;
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const suffix = now.getHours() > 12 ? 'pm' : 'am';
+      setClockText(`${hours}:${minutes}${suffix}`);
     };
 
     update();
