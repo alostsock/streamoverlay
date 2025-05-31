@@ -5,8 +5,10 @@ import { Route, Switch } from 'wouter';
 
 import { Clock } from './clock';
 import { NowPlaying } from './now-playing';
+import { Chat } from './chat';
 import { Birbs } from './birbs';
 import { Janktuber } from './janktuber';
+import { TwitchAuth } from './twitch-auth';
 
 export function App() {
   return (
@@ -16,6 +18,7 @@ export function App() {
           <section className="sidebar">
             <div className="visuals">
               <Birbs />
+              <Chat />
               <Janktuber />
             </div>
             <NowPlaying />
@@ -44,6 +47,10 @@ export function App() {
         <main className="JanktuberPage">
           <Janktuber />
         </main>
+      </Route>
+
+      <Route path="/auth">
+        <TwitchAuth />
       </Route>
     </Switch>
   );

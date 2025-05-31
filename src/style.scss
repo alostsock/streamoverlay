@@ -93,11 +93,23 @@ main {
         width: 100%;
         height: 100%;
 
+        display: flex;
+        flex-direction: column;
+
         position: relative;
 
-        .Janktuber {
-          height: 45%;
+        .Birbs {
+          height: 100%;
+          position: absolute;
+        }
 
+        .Chat {
+          height: 65%;
+          position: absolute;
+        }
+
+        .Janktuber {
+          height: 50%;
           position: absolute;
           bottom: 0;
         }
@@ -136,6 +148,10 @@ main {
   &.JanktuberPage {
     border: 1px solid var(--orange-5);
   }
+}
+
+.Chat {
+  width: 100%;
 }
 
 .Backgrounded {
