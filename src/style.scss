@@ -1,8 +1,8 @@
 :root {
   color: var(--text-color);
-  text-shadow: 1px 1px 1.5px var(--text-shadow-color);
+  text-shadow: var(--text-shadow);
   font-family: DotGothic16, sans-serif;
-  font-size: 20px;
+  font-size: 1vw; // Scale font to match overall overlay scaling
   font-weight: 400;
   letter-spacing: 1.5px;
   line-height: 1.5;
@@ -15,17 +15,24 @@
 
   // --text-color: var(--orange-2);
   // --text-shadow-color: var(--orange-6);
+  // --text-color-inverted: var(--orange-9);
+  // --text-shadow-color-inverted: var(--orange-8);
   // --accent-color: var(--orange-5);
   // --active-color: var(--orange-6);
   // --bg-color: var(--orange-9);
 
   --text-color: var(--blue-1);
   --text-shadow-color: var(--blue-6);
+  --text-color-inverted: var(--blue-9);
+  --text-shadow-color-inverted: var(--blue-8);
   --accent-color: var(--blue-5);
-  --active-color: var(--blue-6);
+  --active-color: var(--blue-7);
   --bg-color: var(--blue-9);
 
+  --text-shadow: 1px 1px 1.5px var(--text-shadow-color);
+  --text-shadow-inverted: 1px 1px 1px var(--text-shadow-color-inverted);
   --radius: 0.2rem;
+  --radius-lg: 0.4rem;
 
   --orange-0: #ffefe7;
   --orange-1: #ffeadf;
@@ -122,14 +129,6 @@ main {
     height: 100vh;
     position: relative;
 
-    .Janktuber {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      height: 40vh;
-      width: 20vw;
-    }
-
     .topbar {
       background: var(--bg-color);
       height: 40px;
@@ -138,6 +137,19 @@ main {
       align-items: center;
       gap: 1em;
       padding: 0 1em;
+    }
+
+    .Chat {
+      max-width: 25vw;
+      max-height: 65vh;
+    }
+
+    .Janktuber {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 40vh;
+      width: 20vw;
     }
   }
 
@@ -152,6 +164,58 @@ main {
 
 .Chat {
   width: 100%;
+  height: 100%;
+
+  perspective-origin: bottom left;
+  perspective: 30vw;
+
+  .messages {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    gap: 1.5em;
+    padding: 1em;
+    overflow: hidden;
+
+    transform-origin: top left;
+    transform: rotateX(10deg);
+
+    perspective-origin: bottom left;
+    perspective: 10vw;
+  }
+
+  .ChatMessage {
+    transform-origin: top left;
+    transform: rotateX(-15deg) rotateY(10deg) rotateZ(-5deg);
+
+    .name {
+      text-transform: uppercase;
+      background: var(--active-color);
+      width: fit-content;
+      padding: 0.25em 0.5em;
+      margin-left: 0.5em;
+      margin-bottom: -0.5em;
+      border-radius: var(--radius-lg);
+      position: relative;
+      z-index: 1;
+
+      &.inverted {
+        color: var(--text-color-inverted);
+        text-shadow: var(--text-shadow-inverted);
+      }
+    }
+
+    .content {
+      width: fit-content;
+      background: var(--bg-color);
+      padding: 1em;
+      border: 1px solid var(--active-color);
+      border-radius: var(--radius);
+    }
+  }
 }
 
 .Backgrounded {

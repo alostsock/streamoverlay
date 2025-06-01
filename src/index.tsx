@@ -33,6 +33,7 @@ export function App() {
             <Clock />
             <NowPlaying inline />
           </div>
+          <Chat />
           <Janktuber />
         </main>
       </Route>
