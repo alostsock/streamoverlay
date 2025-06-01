@@ -2,10 +2,10 @@
   color: var(--text-color);
   text-shadow: var(--text-shadow);
   font-family: DotGothic16, sans-serif;
-  font-size: 1vw; // Scale font to match overall overlay scaling
+  font-size: 1.3vw; // Scale font to match overall overlay scaling
   font-weight: 400;
   letter-spacing: 1.5px;
-  line-height: 1.5;
+  line-height: 1.3;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -14,7 +14,7 @@
   -webkit-text-size-adjust: 100%;
 
   // --text-color: var(--orange-2);
-  // --text-shadow-color: var(--orange-6);
+  // --text-shadow-color: var(--orange-5);
   // --text-color-inverted: var(--orange-9);
   // --text-shadow-color-inverted: var(--orange-8);
   // --accent-color: var(--orange-5);
@@ -22,15 +22,15 @@
   // --bg-color: var(--orange-9);
 
   --text-color: var(--blue-1);
-  --text-shadow-color: var(--blue-6);
+  --text-shadow-color: var(--blue-5);
   --text-color-inverted: var(--blue-9);
   --text-shadow-color-inverted: var(--blue-8);
   --accent-color: var(--blue-5);
   --active-color: var(--blue-7);
   --bg-color: var(--blue-9);
 
-  --text-shadow: 1px 1px 1.5px var(--text-shadow-color);
-  --text-shadow-inverted: 1px 1px 1px var(--text-shadow-color-inverted);
+  --text-shadow: -0.5px -0.5px 0px var(--text-shadow-color);
+  --text-shadow-inverted: -0.5px -0.5px 0px var(--text-shadow-color-inverted);
   --radius: 0.2rem;
   --radius-lg: 0.4rem;
 
@@ -89,20 +89,18 @@ main {
     .sidebar {
       grid-area: side;
 
+      background: var(--bg-color);
+      height: 100%;
       display: flex;
       flex-direction: column;
       gap: 0.5em;
-
-      background: var(--bg-color);
-      height: 100%;
+      position: relative;
 
       .visuals {
         width: 100%;
         height: 100%;
-
         display: flex;
         flex-direction: column;
-
         position: relative;
 
         .Birbs {
@@ -119,6 +117,12 @@ main {
           height: 50%;
           position: absolute;
           bottom: 0;
+        }
+
+        .Clock {
+          position: absolute;
+          bottom: 0;
+          left: 1em;
         }
       }
     }
@@ -166,9 +170,6 @@ main {
   width: 100%;
   height: 100%;
 
-  perspective-origin: bottom left;
-  perspective: 30vw;
-
   .messages {
     width: 100%;
     height: 100%;
@@ -176,29 +177,23 @@ main {
     display: flex;
     flex-direction: column;
     justify-content: end;
-    gap: 1.5em;
+    gap: 0.25em;
     padding: 1em;
     overflow: hidden;
-
-    transform-origin: top left;
-    transform: rotateX(10deg);
-
-    perspective-origin: bottom left;
-    perspective: 10vw;
   }
 
   .ChatMessage {
     transform-origin: top left;
-    transform: rotateX(-15deg) rotateY(10deg) rotateZ(-5deg);
+    transform: perspective(5em) rotateX(-3deg) rotateY(4deg) rotateZ(-4deg);
 
     .name {
-      text-transform: uppercase;
       background: var(--active-color);
       width: fit-content;
       padding: 0.25em 0.5em;
       margin-left: 0.5em;
       margin-bottom: -0.5em;
       border-radius: var(--radius-lg);
+      box-shadow: -0.25em 0.25em var(--bg-color);
       position: relative;
       z-index: 1;
 
@@ -211,7 +206,7 @@ main {
     .content {
       width: fit-content;
       background: var(--bg-color);
-      padding: 1em;
+      padding: 0.75em 1em;
       border: 1px solid var(--active-color);
       border-radius: var(--radius);
     }

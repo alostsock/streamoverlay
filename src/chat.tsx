@@ -9,7 +9,7 @@ const WS_URL = 'wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=10';
 const USER_ID = import.meta.env.VITE_TWITCH_USER_ID;
 
 const MAX_MSGS = 50;
-const OPACITY_FADE_RATE = 0.04;
+const OPACITY_FADE_RATE = 0.03;
 
 export function Chat() {
   // const [wsMsgs, setWsMsgs] = useState<WSMessage[]>([]);

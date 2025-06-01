@@ -1,3 +1,4 @@
+import '@fontsource/dotgothic16';
 import './style.scss';
 
 import { render } from 'preact';
@@ -20,6 +21,7 @@ export function App() {
               <Birbs />
               <Chat />
               <Janktuber />
+              <Clock />
             </div>
             <NowPlaying />
           </section>

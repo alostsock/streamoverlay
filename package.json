@@ -8,6 +8,7 @@
     "start": "concurrently \"vite dev\" \"uv run --directory server uvicorn app.main:app --reload --timeout-graceful-shutdown 0\""
   },
   "dependencies": {
+    "@fontsource/dotgothic16": "^5.2.5",
     "@mediapipe/tasks-vision": "^0.10.9",
     "preact": "^10.25.3",
     "three": "^0.172.0",
