@@ -125,6 +125,8 @@ export function TwitchAuth() {
   );
 }
 
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
 export async function callTwitchApi<T>(url: string, options?: RequestInit) {
   let retries = 1;
 
@@ -154,6 +156,8 @@ export async function callTwitchApi<T>(url: string, options?: RequestInit) {
       if (retries === 0) {
         throw error;
       }
+
+      await delay(1000);
     }
   }
 }

@@ -1,3 +1,4 @@
+import '@fontsource-variable/inconsolata'; // Supports weights 200-900
 import '@fontsource/dotgothic16';
 import './style.scss';
 
