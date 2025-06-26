@@ -1,41 +1,78 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 
 import { callTwitchApi } from './twitch-auth';
 import { WSMessage, isMsgType } from './twitch';
 import { Backgrounded } from './backgrounded';
 import { getFgColorRgb, hexToRgb, isSimilarColor } from './color-utils';
 
-const WS_URL = 'wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=10';
+const KEEPALIVE_SECONDS = 10; // Can be between 10 and 600
+const KEEPALIVE_MS = (KEEPALIVE_SECONDS + 1) * 1000; // Add 1s buffer
+const WS_URL = `wss://eventsub.wss.twitch.tv/ws?keepalive_timeout_seconds=${KEEPALIVE_SECONDS}`;
 const USER_ID = import.meta.env.VITE_TWITCH_USER_ID;
 
 const MAX_MSGS = 50;
 const OPACITY_FADE_RATE = 0.03;
 
 export function Chat() {
+  const msgIds = useRef(new Set());
   const [msgs, setMsgs] = useState<Message[]>([]);
+  const [wsConnectionId, setWsConnectionId] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(WS_URL);
+    // If this method isn't called with `refresh = true` within KEEPALIVE_MS,
+    // refresh chat
+    let lastKeepalive = performance.now();
+    let keepaliveInterval: number | null = null;
+    const checkKeepalive = (refresh?: boolean) => {
+      const now = performance.now();
+      if (now - lastKeepalive >= KEEPALIVE_MS) {
+        console.info('opening new chat websocket');
+        setWsConnectionId((prev) => prev + 1);
+      }
+      if (refresh) {
+        lastKeepalive = now;
+      }
+      console.info(`keepalive ${refresh ? 'refreshed' : 'checked'}, rescheduling`);
+      if (keepaliveInterval) {
+        clearInterval(keepaliveInterval);
+      }
+      keepaliveInterval = setInterval(() => checkKeepalive(), KEEPALIVE_MS);
+    };
 
-    const append = (msg: Message) =>
+    const append = (msg: Message) => {
+      if (msgIds.current.has(msg.id)) {
+        return;
+      } else {
+        msgIds.current.add(msg.id);
+      }
       setMsgs((prevMsgs) => {
         while (prevMsgs.length > MAX_MSGS) {
           prevMsgs.shift();
         }
         return [...prevMsgs, msg];
       });
+    };
+
+    const ws = new WebSocket(WS_URL);
+    checkKeepalive(true);
 
     ws.onmessage = (event) => {
+      checkKeepalive(true);
       const wsMsg = JSON.parse(event.data) as WSMessage;
       const msg = msgFromWsMsg(wsMsg, setSessionId);
-      if (msg) append(msg);
+      if (msg) {
+        append(msg);
+      }
     };
 
     return () => {
       ws.close();
+      if (keepaliveInterval) {
+        clearInterval(keepaliveInterval);
+      }
     };
-  }, []);
+  }, [wsConnectionId]);
 
   useEffect(() => {
     if (sessionId) {
@@ -121,11 +158,12 @@ function msgFromWsMsg(msg: WSMessage, onConnect?: (sessionId: string) => void): 
       text: msg.payload.event.message.text,
       color: msg.payload.event.color,
     };
+  } else if (isMsgType(msg, 'session_keepalive')) {
+  } else {
+    console.warn(
+      `unhandled websocket message_type: ${msg.metadata.message_type}\n${JSON.stringify(msg.payload)}`,
+    );
   }
-
-  console.warn(
-    `unhandled websocket message_type: ${msg.metadata.message_type}\n${JSON.stringify(msg.payload)}`,
-  );
   return null;
 }
 
