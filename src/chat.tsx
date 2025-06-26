@@ -99,16 +99,21 @@ export function Chat() {
   );
 }
 
+interface MessageFragment {
+  text: string;
+  emoteId?: string;
+}
+
 interface Message {
   id: string;
   type: 'welcome' | 'chat';
   name: string;
-  text: string;
+  content: MessageFragment[];
   color?: string;
 }
 
 function ChatMessage({
-  message: { name, text, color },
+  message: { name, content, color },
   opacity,
 }: {
   message: Message;
@@ -130,6 +135,9 @@ function ChatMessage({
     }
   }, [color, nameEl]);
 
+  const emoteImgUrl = (emoteId: string) =>
+    `https://static-cdn.jtvnw.net/emoticons/v2/${emoteId}/static/light/2.0`;
+
   const nameClass = ['name', invertFgColor && 'inverted'].filter(Boolean).join(' ');
 
   return (
@@ -138,7 +146,13 @@ function ChatMessage({
         {name}
       </div>
       <Backgrounded className="content" pattern="dots">
-        {text}
+        {content.map(({ text, emoteId }, index) => {
+          if (emoteId) {
+            return <img key={index} alt={text} src={emoteImgUrl(emoteId)} className="emoji" />;
+          } else {
+            return <span key={index}>{text}</span>;
+          }
+        })}
       </Backgrounded>
     </div>
   );
@@ -147,7 +161,12 @@ function ChatMessage({
 function msgFromWsMsg(msg: WSMessage, onConnect?: (sessionId: string) => void): Message | null {
   if (isMsgType(msg, 'session_welcome')) {
     onConnect?.(msg.payload.session.id);
-    return { id: 'welcome', type: 'welcome', name: 'SYSTEM', text: 'Joined chat!' };
+    return {
+      id: 'welcome',
+      type: 'welcome',
+      name: 'SYSTEM',
+      content: [{ text: 'Joined chat!' }],
+    };
   }
 
   if (isMsgType(msg, 'notification')) {
@@ -155,7 +174,13 @@ function msgFromWsMsg(msg: WSMessage, onConnect?: (sessionId: string) => void): 
       id: msg.payload.event.message_id,
       type: 'chat',
       name: msg.payload.event.chatter_user_name,
-      text: msg.payload.event.message.text,
+      content: msg.payload.event.message.fragments.map((fragment) => {
+        if (fragment.type == 'emote') {
+          return { text: fragment.text, emoteId: fragment.emote?.id };
+        } else {
+          return { text: fragment.text };
+        }
+      }),
       color: msg.payload.event.color,
     };
   } else if (isMsgType(msg, 'session_keepalive')) {

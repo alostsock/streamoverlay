@@ -211,6 +211,11 @@ main {
       padding: 0.75em 1em;
       border: 1px solid var(--active-color);
       border-radius: var(--radius);
+
+      .emoji {
+        max-height: 1.5em;
+        vertical-align: middle;
+      }
     }
   }
 }
