@@ -205,7 +205,7 @@ main {
     }
 
     .content {
-      word-break: break-all;
+      overflow-wrap: break-word;
       width: fit-content;
       background: var(--bg-color);
       padding: 0.75em 1em;
