@@ -128,6 +128,41 @@ main {
     }
   }
 
+  &.FfxivPage {
+    display: grid;
+    grid-template-areas: 'side main';
+    grid-template-columns: 25vw 75vw;
+    grid-template-rows: 1fr;
+
+    .sidebar {
+      grid-area: side;
+
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+      position: relative;
+
+      .Chat {
+        opacity: 0.9;
+        padding-bottom: 30vh;
+        max-height: 72vh;
+      }
+
+      .chatoverlay {
+        background: var(--blue-9);
+        height: 28vh;
+        border-top-right-radius: var(--radius);
+
+        .Janktuber {
+          position: relative;
+          transform: scale(0.70);
+          top: -45%;
+        }
+      }
+    }
+  }
+
   &.FullscreenPage {
     width: 100%;
     height: 100vh;
@@ -178,7 +213,7 @@ main {
     flex-direction: column;
     justify-content: end;
     gap: 0.25em;
-    padding: 1em;
+    padding: 0.5em;
     overflow: hidden;
   }
 
@@ -190,7 +225,7 @@ main {
     .name {
       background: var(--active-color);
       width: fit-content;
-      padding: 0.25em 0.5em;
+      padding: 0.125em 0.5em;
       margin-left: 0.5em;
       margin-bottom: -0.5em;
       border-radius: var(--radius-lg);
@@ -208,7 +243,8 @@ main {
       overflow-wrap: break-word;
       width: fit-content;
       background: var(--bg-color);
-      padding: 0.75em 1em;
+      padding: 0.5em;
+      margin-top: 0.25em;
       border: 1px solid var(--active-color);
       border-radius: var(--radius);
 
@@ -274,6 +310,7 @@ main {
 
     .icon {
       font-size: 1.3em;
+      margin-left: 0.5em;
     }
   }
 }

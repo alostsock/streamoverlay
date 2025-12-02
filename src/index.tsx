@@ -30,6 +30,18 @@ export function App() {
         </main>
       </Route>
 
+      <Route path="/ffxiv">
+        <main className="FfxivPage">
+          <section className="sidebar">
+            <Chat />
+            <div className="chatoverlay">
+              <NowPlaying inline />
+              <Janktuber />
+            </div>
+          </section>
+        </main>
+      </Route>
+
       <Route path="/fullscreen">
         <main className="FullscreenPage">
           <div className="topbar">
